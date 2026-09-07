@@ -8,4 +8,6 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN || '*',
   supabaseUrl: (process.env.SUPABASE_URL || '').replace(/\/+$/, ''),
   supabaseAnonKey: process.env.SUPABASE_ANON_KEY || '',
+  jwtSecret: process.env.JWT_SECRET || 'dev-secret-pipelinehq-jwt-key-2026',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
 };
