@@ -11,6 +11,9 @@ router.use(authenticate, requireRole('recruiter'));
 router.post('/', applicationsController.createApplication);
 router.get('/', applicationsController.getApplications);
 router.get('/:id', applicationsController.getApplicationById);
+router.patch('/:id/advance', applicationsController.advanceApplication);
+router.patch('/:id/reject', applicationsController.rejectApplication);
+router.patch('/:id/reinstate', applicationsController.reinstateApplication);
 router.patch('/:id', applicationsController.updateApplication);
 router.delete('/:id', applicationsController.deleteApplication);
 

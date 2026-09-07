@@ -1,4 +1,5 @@
 import * as applicationsService from './applications.service.js';
+import * as pipelineService from '../pipeline/pipeline.service.js';
 
 export const createApplication = async (req, res, next) => {
   try {
@@ -64,6 +65,62 @@ export const deleteApplication = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Application deleted successfully.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const advanceApplication = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { targetStage, stage, notes } = req.body || {};
+    const application = await pipelineService.advanceApplication(id, {
+      requestedTargetStage: targetStage || stage,
+      notes,
+      userId: req.user?.id,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { application },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectApplication = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason, notes } = req.body || {};
+    const application = await pipelineService.rejectApplication(id, {
+      reason,
+      notes,
+      userId: req.user?.id,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { application },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const reinstateApplication = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body || {};
+    const application = await pipelineService.reinstateApplication(id, {
+      notes,
+      userId: req.user?.id,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { application },
     });
   } catch (error) {
     next(error);
