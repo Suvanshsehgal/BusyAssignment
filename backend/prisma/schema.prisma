@@ -1,0 +1,163 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum UserRole {
+  recruiter
+  interviewer
+}
+
+enum JobStatus {
+  Open
+  Closed
+  Archived
+}
+
+enum ApplicationStage {
+  Applied
+  Screening
+  Interview
+  Offer
+  Hired
+  Rejected
+}
+
+enum TimelineEventType {
+  APPLICATION_CREATED
+  STAGE_CHANGED
+  APPLICATION_REJECTED
+  APPLICATION_REINSTATED
+  INTERVIEWER_ASSIGNED
+  INTERVIEWER_UNASSIGNED
+  FEEDBACK_SUBMITTED
+}
+
+model User {
+  id              String           @id @default(uuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            UserRole
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  interviewPanels InterviewPanel[]
+  feedbacks       Feedback[]
+  timelineEvents  Timeline[]
+  alertDismissals AlertDismissal[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model JobOpening {
+  id           String        @id @default(uuid())
+  title        String
+  department   String
+  description  String        @db.Text
+  status       JobStatus     @default(Open)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  applications Application[]
+}
+
+model Application {
+  id                String           @id @default(uuid())
+  candidateName     String
+  email             String
+  source            String
+  notes             String?          @db.Text
+  jobOpeningId      String
+  stage             ApplicationStage @default(Applied)
+  appliedDate       DateTime         @default(now())
+  stageEnteredAt    DateTime         @default(now())
+  rejectedFromStage ApplicationStage?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  jobOpening        JobOpening       @relation(fields: [jobOpeningId], references: [id], onDelete: Restrict)
+  interviewPanels   InterviewPanel[]
+  feedbacks         Feedback[]
+  timelineEvents    Timeline[]
+  alertDismissals   AlertDismissal[]
+
+  @@index([jobOpeningId])
+  @@index([stage])
+  @@index([source])
+  @@index([appliedDate])
+  @@index([updatedAt])
+  @@index([stageEnteredAt])
+  @@index([email])
+  @@index([candidateName])
+}
+
+model InterviewPanel {
+  id            String      @id @default(uuid())
+  applicationId String
+  userId        String
+  assignedAt    DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, userId])
+  @@index([applicationId])
+  @@index([userId])
+}
+
+model Feedback {
+  id            String      @id @default(uuid())
+  applicationId String
+  interviewerId String
+  content       String      @db.Text
+  score         Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  interviewer   User        @relation(fields: [interviewerId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([interviewerId])
+}
+
+model Timeline {
+  id            String            @id @default(uuid())
+  applicationId String
+  eventType     TimelineEventType
+  oldStage      ApplicationStage?
+  newStage      ApplicationStage?
+  userId        String?
+  details       Json?
+  createdAt     DateTime          @default(now())
+
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([applicationId])
+  @@index([createdAt])
+  @@index([eventType])
+}
+
+model AlertDismissal {
+  id            String           @id @default(uuid())
+  applicationId String
+  stage         ApplicationStage
+  dismissedAt   DateTime         @default(now())
+  dismissedById String?
+  createdAt     DateTime         @default(now())
+
+  application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  dismissedBy   User?            @relation(fields: [dismissedById], references: [id], onDelete: SetNull)
+
+  @@unique([applicationId, stage])
+  @@index([applicationId, stage])
+  @@index([dismissedAt])
+}
