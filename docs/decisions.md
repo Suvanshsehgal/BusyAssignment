@@ -133,3 +133,25 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - An all-or-nothing transaction would mean a single edge-case failure blocks progress for 50 valid candidates, causing extreme recruiter frustration.
   - By isolating each candidate transition in its own `prisma.$transaction`, valid applications advance and record immutable timeline events, while invalid candidates fail individually with clear, human-readable explanations.
   - Handing bulk actions on the backend prevents partial network failures and client-side retry storms that occur when frontends attempt to fire dozens of parallel requests.
+
+---
+
+## Decision 13: Clean Schema Extension for Interview Scheduling (`scheduledAt`)
+
+- **Chose**: Adding an optional `scheduledAt DateTime?` timestamp column and index (`@@index([scheduledAt])`) to the `InterviewPanel` table, paired with an incremental Prisma migration (`20260908152000_add_scheduled_at_to_interview_panel`).
+- **Rejected**: Attempting to deduce scheduled interviews purely from timeline logs or panel assignment dates (`assignedAt`) without calendar slot representation.
+- **Why**:
+  - In a real-world recruiting workflow, assigning an interviewer to a panel and scheduling the candidate interview are distinct actions: an interviewer may be assigned on Monday for an interview taking place on Thursday.
+  - While maintaining full backward compatibility by falling back to `assignedAt` for candidates currently in the `Interview` stage if `scheduledAt` is null, having explicit `scheduledAt` support enables accurate calendar slot aggregation for the "Interviews Scheduled This Week" KPI.
+  - Adding a database index on `scheduledAt` ensures range lookups (`gte: startOfWeek, lte: endOfWeek`) execute via index scan rather than full table scan.
+
+---
+
+## Decision 14: Server-Side Database Aggregations for Analytics & Reporting
+
+- **Chose**: Performing all analytics computations (`overview`, `by-job`, `by-stage`, `applications-trend`) strictly at the database level using Prisma/PostgreSQL `groupBy`, `count`, and indexed range queries.
+- **Rejected**: Fetching the entire application repository into Node.js runtime memory and calculating metrics using JavaScript `filter`, `reduce`, or `map`.
+- **Why**:
+  - Fetching tens of thousands of application records into application memory to calculate counts introduces serious memory bloat, high latency, and vulnerability to node process crashes.
+  - Native PostgreSQL `GROUP BY` and indexed range aggregations execute in milliseconds and transmit only aggregated scalar results over the wire.
+  - The 12-week applications trend generates a fixed array of 12 UTC week intervals, fetching only timestamp fields within the 12-week window (`appliedDate >= 12WeeksAgoStart`), guaranteeing bounded execution time and constant memory footprint.

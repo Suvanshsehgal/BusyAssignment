@@ -317,7 +317,7 @@ Recruiter Client
    └─ Returns comprehensive results: { total, succeeded_count, failed_count, successful, failed }
 ```
 
-### Flow J: Server-Side RFC 4180 CSV Export (`GET /api/v1/applications/export-csv`)
+#### Flow J: Server-Side RFC 4180 CSV Export (`GET /api/v1/applications/export-csv`)
 ```text
 Recruiter Client
       │
@@ -335,6 +335,41 @@ Recruiter Client
    │   ├─ Content-Type: text/csv; charset=utf-8
    │   └─ Content-Disposition: attachment; filename="applications.csv"
    └─ Streams/sends raw CSV string
+```
+
+### Flow K: Analytics and Reporting (`GET /api/v1/analytics/*`)
+```text
+Recruiter Client
+      │
+      ▼ (GET /api/v1/analytics/[overview | by-job | by-stage | applications-trend])
+1. authenticate & requireRole('recruiter')
+   ├─ 401 Unauthorized if missing or invalid JWT
+   └─ 403 Forbidden if user role is interviewer
+      │
+      ▼
+2. analytics.controller.js
+   ├─ Parses optional referenceDate/date query parameters for historical or test boundary requests
+   └─ Dispatches to analytics.service.js
+      │
+      ▼
+3. analytics.service.js (Database-Level Aggregation Engine)
+   ├─ getOverviewKPIs:
+   │   ├─ prisma.jobOpening.count({ where: { status: 'Open' } })
+   │   ├─ prisma.application.count({ where: { stage: { notIn: ['Rejected', 'Hired'] } } })
+   │   ├─ prisma.interviewPanel.count({ where: { OR: [scheduledAt in week, stage=Interview and assigned in week] } })
+   │   └─ prisma.application.count({ where: { stage: 'Hired', stageEnteredAt in month } })
+   ├─ getAnalyticsByJob:
+   │   ├─ prisma.jobOpening.findMany (active and closed openings)
+   │   └─ prisma.application.groupBy({ by: ['jobOpeningId', 'stage'], _count: { id: true } })
+   ├─ getAnalyticsByStage:
+   │   └─ prisma.application.groupBy({ by: ['stage'], _count: { id: true } })
+   └─ getApplicationsTrend:
+       ├─ Generates exactly 12 weekly UTC intervals (oldest to current)
+       └─ prisma.application.findMany({ where: { appliedDate: { gte: oldest12WeekWindow } }, select: { appliedDate: true } })
+      │
+      ▼
+4. Response Handler
+   └─ Returns HTTP 200 OK with { status: 'success', data }
 ```
 
 ---
@@ -377,9 +412,9 @@ Candidate timelines in PipelineHQ are designed around strict compliance and non-
 4. **Timeline Modification & Deletion APIs**:
    - *Decision*: Never create client-facing POST, PUT, PATCH, or DELETE endpoints for timeline records, even for recruiters.
    - *Why*: Audit trails must be legally defensible, tamper-evident, and immutable. Exposing mutation endpoints would open the system to audit tampering or accidental history deletion.
-5. **In-Memory Pagination & Client-Side Bulk Loops**:
-   - *Decision*: Never fetch all applications into memory to paginate, sort, or filter with JavaScript array methods; never rely on clients firing individual HTTP requests in parallel for bulk operations.
-   - *Why*: Performing filtering, sorting, counting, and pagination at the PostgreSQL database level guarantees sub-second response times and bounded memory usage regardless of applicant volume. Handling bulk operations server-side prevents partial client network dropouts from corrupting batch progress.
-6. **Premature Implementation of Future Phase APIs**:
-   - *Decision*: Intentionally omitted Phase 9 analytics dashboards and Phase 10 SLA stalled-application background alerts during Phase 8.
-   - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the core ATS foundation before layering alerting engines and reporting dashboards.
+5. **In-Memory Aggregation, Filtering & Pagination**:
+   - *Decision*: Never fetch the entire application dataset into Node.js application memory to compute KPIs, group stages, or paginate results using JavaScript arrays.
+   - *Why*: Utilizing database-level `GROUP BY`, native counts, and date boundary indexes guarantees $O(1)$ memory usage and microsecond query execution times regardless of whether the database holds ten or ten million candidate records.
+6. **Premature Implementation of Phase 10 Stalled SLA Alerts**:
+   - *Decision*: Intentionally omitted Phase 10 stalled alerts (>10 days) and alert dismissals during Phase 9.
+   - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the analytics and reporting engines before layering SLA alerting rules and dismissal state machines.

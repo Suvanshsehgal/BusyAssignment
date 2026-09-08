@@ -235,5 +235,59 @@ await prisma.$transaction(async (tx) => {
 - I restructured the bulk handler to iterate through each candidate independently. Each candidate is processed in its own isolated transaction: valid candidates advance and write their Phase 7 timeline event, while invalid candidates are caught, rolled back, and recorded in a `failed` list with their specific reason.
 - This ensures resilient, partial-success execution where valid candidates are never blocked by an edge case candidate.
 
+---
+
+## 13. Interview Scheduling Schema Extension vs. Timeline Heuristics (Phase 9)
+
+### Prompt
+> "How should I calculate the 'Interviews Scheduled This Week' KPI for the analytics dashboard given that `InterviewPanel` only has `applicationId`, `userId`, and `assignedAt`?"
+
+### What I got
+The AI suggested inferring scheduled interviews by querying the `Timeline` audit trail for `INTERVIEWER_ASSIGNED` events or filtering candidates in the `Interview` stage whose `stageEnteredAt` fell within the current week:
+```javascript
+const interviewsThisWeek = await prisma.timeline.count({
+  where: {
+    eventType: 'INTERVIEWER_ASSIGNED',
+    createdAt: { gte: startOfWeek, lte: endOfWeek },
+  },
+});
+```
+
+### What I corrected
+- Panel assignment date is not an interview schedule date. In recruiting operations, an interviewer can be added to an interview panel on Monday for an interview happening next week. Counting assignment events conflates panel configuration with calendar scheduling.
+- Instead of using loose heuristics, I introduced a clean, minimal schema extension: adding an optional `scheduledAt DateTime?` column with an index (`@@index([scheduledAt])`) on `InterviewPanel`.
+- I updated the Prisma schema, executed a safe PostgreSQL migration on Supabase, updated `seed.js`, and supported an optional `scheduledAt` ISO timestamp when recruiters assign panels.
+- For backward compatibility with legacy seed data where `scheduledAt` is null, I crafted the query using an `OR` condition that checks either `scheduledAt` within the week OR panels assigned this week whose candidate is currently in `Interview` stage.
+
+---
+
+## 14. Server-Side GroupBy Aggregations vs. In-Memory Array Reductions (Phase 9)
+
+### Prompt
+> "Write the analytics endpoint to get stage breakdowns and weekly application trends for the recruiter dashboard."
+
+### What I got
+The AI suggested loading all applications from the database and using JavaScript `.reduce()` and `.filter()` in memory:
+```javascript
+const applications = await prisma.application.findMany();
+const stageCounts = applications.reduce((acc, app) => {
+  acc[app.stage] = (acc[app.stage] || 0) + 1;
+  return acc;
+}, {});
+```
+
+### What I corrected
+- Fetching the entire table into Node.js memory completely defeats database indexing and does not scale beyond trivial amounts of test data.
+- I refactored the stage breakdown and job breakdown to use Prisma's native database-level `groupBy`:
+  ```javascript
+  const stageCounts = await prisma.application.groupBy({
+    by: ['stage'],
+    _count: { id: true },
+  });
+  ```
+- This pushes the aggregation down to PostgreSQL, returning only the 6 aggregated stage counts over the network.
+- For the 12-week applications trend, I calculated the 12 UTC week windows upfront so all 12 chronological buckets are guaranteed even when counts are zero, and queried only application timestamps within the 12-week window (`appliedDate >= oldestWindowStart`).
+
+
 
 

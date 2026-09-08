@@ -46,6 +46,8 @@ Explicit join model representing an interviewer assignment to a specific candida
 - `id` (`String` / UUID, Primary Key): Assignment identifier.
 - `applicationId` (`String` / UUID, Foreign Key): Target application.
 - `userId` (`String` / UUID, Foreign Key): Assigned interviewer (must possess `interviewer` role).
+
+- `scheduledAt` (`DateTime`, Optional): Specific scheduled interview slot timestamp for calendar and weekly overview metrics.
 - `assignedAt` (`DateTime`): When the interviewer was assigned.
 - `createdAt` (`DateTime`): Record creation timestamp.
 
@@ -115,6 +117,7 @@ Records stage-specific alert dismissals by recruiters for stalled applications (
 | `Application` | `email`, `candidateName` | Candidate search queries across name and email. |
 | `InterviewPanel` | `applicationId` | Fetching assigned interviewers for a candidate scorecard. |
 | `InterviewPanel` | `userId` | Fetching all applications assigned to an interviewer. |
+| `InterviewPanel` | `scheduledAt` | Rapid range filtering for interviews scheduled within current week/month. |
 | `InterviewPanel` | `[applicationId, userId]` (Unique) | Enforces unique assignment and fast joint lookup. |
 | `Feedback` | `applicationId` | Fetching all interview scorecards for a candidate. |
 | `Feedback` | `interviewerId` | Reviewing feedback submitted by a specific interviewer. |
