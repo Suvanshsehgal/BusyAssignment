@@ -161,3 +161,35 @@ The AI suggested removing `prisma.$transaction` entirely and running the operati
 - The root cause was that Supabase is hosted remotely (Singapore), and executing multiple sequential queries within a single interactive transaction over WAN exceeded Prisma's default 5000ms limit.
 - Instead of sacrificing ACID atomicity, I kept the transactions intact and explicitly configured Prisma's interactive transaction options: `{ maxWait: 10000, timeout: 20000 }`. This gave the transaction sufficient buffer for network roundtrips and completely resolved the timeouts.
 
+---
+
+## 9. Designing the Append-Only Audit Timeline Architecture (Phase 7)
+
+### Prompt
+> "How should I design the timeline audit API so recruiters can manage and correct candidate history logs if an interviewer made a mistake or a stage was updated accidentally?"
+
+### What I got
+The AI suggested implementing standard RESTful CRUD endpoints (`POST /timeline`, `PUT /timeline/:id`, `DELETE /timeline/:id`), allowing recruiters with administrative access to edit or delete historical audit entries.
+
+### What I corrected
+- An audit trail must be legally defensible, tamper-evident, and strictly immutable. Permitting any API endpoint or UI control to mutate or delete historical timeline records destroys compliance integrity.
+- I rejected exposing any mutation routes (POST, PUT, PATCH, DELETE) to clients. Even recruiters cannot modify or delete timeline events.
+- Instead, timeline events are generated strictly internally within atomic database transactions by the underlying domain business services (`applications.service.js`, `pipeline.service.js`, `panels.service.js`, `feedback.service.js`).
+- The client is only provided a read-only `GET /api/v1/applications/:id/timeline` endpoint sorted deterministically in ascending chronological order (`createdAt ASC, id ASC`).
+
+---
+
+## 10. Fixing Authorization & 404 Status for Non-Existent Applications (Phase 7 Edge Case Correction)
+
+### Prompt
+> "In `requireApplicationAccess`, what should happen if an interviewer requests an application ID that does not exist in the database?"
+
+### What I got
+The AI's middleware simply checked `isInterviewerAssignedToApplication(applicationId, req.user.id)`. Since no panel record existed for a non-existent application ID, it returned `403 Forbidden`.
+
+### What I corrected
+- In standard REST conventions, requesting a resource that doesn't exist should return `404 Not Found`, not `403 Forbidden`, regardless of whether a recruiter or interviewer makes the request.
+- Having an interviewer receive a 403 on a non-existent UUID would cause inconsistent API behavior and mask invalid IDs as permission issues.
+- I refactored `requireApplicationAccess` to query `prisma.application.findUnique` first; if missing, it immediately throws `404 Not Found`. If it exists, it then evaluates interviewer panel assignment and returns `403 Forbidden` only if the application exists but the user is unassigned.
+
+

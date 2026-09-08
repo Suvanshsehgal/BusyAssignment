@@ -98,3 +98,15 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - In a compliant hiring system, candidate reviews and interview scorecards must be legally defensible. Storing interviewer identities directly from `req.user.id` eliminates impersonation and user-ID spoofing.
   - Allowing clients to pass a user ID in query strings (e.g. `GET /api/v1/my-reviews?userId=...`) would introduce severe IDOR vulnerabilities where any authenticated interviewer could view unassigned candidates and confidential evaluations.
   - Checking `InterviewPanel` at the resource-authorization layer (`requireApplicationAccess`) guarantees immediate consistency: if a recruiter removes an interviewer from a panel (`DELETE /api/v1/applications/:id/panel/:userId`), the interviewer's access to view details or submit feedback is revoked instantly without waiting for JWT token expiration.
+
+---
+
+## Decision 10: Append-Only Immutable Candidate Audit Timeline Generated Internally
+
+- **Chose**: Enforcing an append-only, immutable audit trail for candidate applications. Timeline records are generated exclusively by internal business services (`applications`, `pipeline`, `panels`, `feedback`) within atomic database transactions, and are exposed to clients strictly through a read-only endpoint (`GET /api/v1/applications/:id/timeline`) sorted chronologically (`createdAt ASC, id ASC`).
+- **Rejected**: Creating public client endpoints for timeline event creation (`POST /timeline`), updates (`PUT/PATCH /timeline/:id`), or deletions (`DELETE /timeline/:id`), even for recruiters with administrative roles.
+- **Why**:
+  - Regulatory hiring compliance, EEOC standards, and internal auditing require an unalterable history of how candidates were treated, when stages changed, who rejected or reinstated candidates, who sat on interview panels, and who submitted scorecards.
+  - If recruiters or administrators could edit or delete audit logs through API endpoints, the audit trail ceases to be reliable or legally defensible.
+  - Deriving the actor strictly from `req.user.id` and generating event records within the same `prisma.$transaction` as the business operation guarantees non-repudiation and prevents orphaned or desynchronized audit events.
+  - Ordering events deterministically by `createdAt ASC` with a secondary sort on `id ASC` guarantees consistent, tamper-evident chronological presentation across client platforms.

@@ -250,9 +250,57 @@ Interviewer Client
                                       │        └─ Appends FEEDBACK_SUBMITTED timeline
 ```
 
+### Flow G: Candidate Audit Timeline Retrieval (`GET /api/v1/applications/:id/timeline`)
+```text
+Authenticated Client (Recruiter or Assigned Interviewer)
+      │
+      ▼ (GET /api/v1/applications/:id/timeline with Bearer token)
+1. authenticate Middleware
+   └─ Validates JWT signature and attaches req.user (401 if unauthenticated)
+      │
+      ▼
+2. requireApplicationAccess Middleware
+   ├─ Queries target Application: 404 Not Found if non-existent
+   ├─ If Recruiter: full audit trail access granted
+   └─ If Interviewer: checks InterviewPanel for [applicationId, req.user.id]
+       (403 Forbidden if not assigned to candidate)
+      │
+      ▼
+3. timeline.service.js (getApplicationTimeline)
+   ├─ Queries Timeline records where applicationId = :id
+   ├─ Eagerly includes actor user profile: { id, name, email, role }
+   ├─ Enforces deterministic ascending chronological sort:
+   │   ORDER BY createdAt ASC, id ASC
+   └─ Returns immutable event history
+```
+
 ---
 
-## 5. What did you decide *not* to build, and why?
+## 5. Append-Only Audit Architecture & Immutability Guarantees
+
+Candidate timelines in PipelineHQ are designed around strict compliance and non-repudiation principles:
+
+1. **Internally Generated, Never Client-Supplied**:
+   - There are **no public timeline creation endpoints** (`POST /api/v1/timeline` or `POST /api/v1/applications/:id/timeline` do not exist).
+   - Timeline events are generated **strictly internally** by domain business services (`applications.service.js`, `pipeline.service.js`, `panels.service.js`, `feedback.service.js`) when legitimate state transitions or evaluations succeed.
+   - Clients cannot supply event payloads, timestamps, previous stages, or new stages.
+
+2. **Server-Enforced Actor Integrity**:
+   - The actor (`userId`) attributed to each timeline event is derived strictly from the cryptographically verified `req.user.id`.
+   - Any client-supplied parameters in request bodies attempting to spoof the actor (e.g. `{ userId: "other-user", actorId: "..." }`) are discarded.
+
+3. **Atomic Transaction Guarantees**:
+   - All state transitions and their corresponding timeline records are wrapped in Prisma interactive transactions (`prisma.$transaction`).
+   - If the business operation fails (e.g. invalid stage skip, duplicate rejection), the entire transaction rolls back. A timeline event can **never** exist for a failed or aborted business operation.
+
+4. **Absolute Immutability at Application Level**:
+   - No `PUT`, `PATCH`, or `DELETE` routes exist for timeline records.
+   - Even recruiters with administrative permissions cannot edit, overwrite, or delete historical timeline entries.
+   - Deletion of an entire application record is blocked if the candidate has progressed past `Applied`, has received feedback, or has assigned interviewers, guaranteeing that completed hiring interactions cannot be erased.
+
+---
+
+## 6. What did you decide *not* to build, and why?
 
 1. **Stateful Session Store in Redis / Database**:
    - *Decision*: Adopted stateless signed JWTs instead of Redis sessions.
@@ -263,6 +311,9 @@ Interviewer Client
 3. **Client-Filtered Interviewer Candidates**:
    - *Decision*: Never accept user IDs or interviewer filters from the frontend in `/my-reviews` or feedback submissions.
    - *Why*: Interviewer identity is derived strictly from the verified `req.user.id` on the server, guaranteeing that interviewers cannot spoof identities or inspect evaluations for unassigned candidates.
-4. **Premature Implementation of Future Phase APIs**:
-   - *Decision*: Intentionally omitted standalone Timeline query APIs, bulk candidate actions, CSV exports, SLA stall alerts, and analytics dashboards during Phase 6.
+4. **Timeline Modification & Deletion APIs**:
+   - *Decision*: Never create client-facing POST, PUT, PATCH, or DELETE endpoints for timeline records, even for recruiters.
+   - *Why*: Audit trails must be legally defensible, tamper-evident, and immutable. Exposing mutation endpoints would open the system to audit tampering or accidental history deletion.
+5. **Premature Implementation of Future Phase APIs**:
+   - *Decision*: Intentionally omitted search/filter/pagination query extensions, bulk candidate actions, CSV exports, SLA stall alerts, and analytics dashboards during Phase 7.
    - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the core ATS foundation before layering alerting engines and reporting dashboards.

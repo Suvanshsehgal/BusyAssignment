@@ -140,7 +140,7 @@ Records stage-specific alert dismissals by recruiters for stalled applications (
 - **Linear Stage Progression**: The business rule that an application must progress strictly *Applied -> Screening -> Interview -> Offer -> Hired* (no forward stage-skipping) is validated at the service layer.
 - **Safe Application Deletion**: Deletion of candidate applications (`DELETE /api/v1/applications/:id`) is restricted to candidates remaining in the initial `Applied` stage who have zero interview feedback records and zero assigned interview panel members. Candidates with active review history cannot be deleted, preserving audit and compliance integrity.
 - **Role Verification on Assignment**: Ensuring only users with `role === 'interviewer'` are assigned to `InterviewPanel` rows.
-- **Timeline Immutability**: The application layer exposes only create/append endpoints for `Timeline` entities, omitting update and delete operations.
+- **Timeline Immutability & Internal Generation**: The application layer exposes no public creation, update, or deletion endpoints for `Timeline` records. Timeline events are strictly append-only, created internally within atomic database transactions by domain services, and queried read-only via `GET /api/v1/applications/:id/timeline`.
 - **Interviewer Access Boundaries**: Ensuring interviewers can only query and submit feedback for applications where their `userId` exists in `InterviewPanel`.
 
 ---
