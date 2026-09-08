@@ -169,7 +169,12 @@ export const getApplicationById = async (id) => {
         },
       },
       timelineEvents: {
-        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: { id: true, name: true, email: true, role: true },
+          },
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       },
     },
   });

@@ -42,6 +42,16 @@ export const requireApplicationAccess = async (req, res, next) => {
       return next(new AppError('Application ID is required for resource authorization.', 400));
     }
 
+    // Verify target application exists first
+    const application = await prisma.application.findUnique({
+      where: { id: applicationId },
+      select: { id: true },
+    });
+
+    if (!application) {
+      return next(new AppError('Application not found.', 404));
+    }
+
     // Recruiters have global access to manage and view pipeline candidates
     if (req.user.role === 'recruiter') {
       return next();

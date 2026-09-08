@@ -2,6 +2,7 @@ import { Router } from 'express';
 import * as applicationsController from './applications.controller.js';
 import * as panelsController from '../panels/panels.controller.js';
 import * as feedbackController from '../feedback/feedback.controller.js';
+import * as timelineController from '../timeline/timeline.controller.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import { requireApplicationAccess } from '../../middleware/requireApplicationAccess.js';
@@ -33,6 +34,9 @@ router.post(
   feedbackController.createFeedback
 );
 router.get('/:id/feedback', requireApplicationAccess, feedbackController.getApplicationFeedback);
+
+// Timeline audit trail (accessible to recruiters or assigned panel interviewers; read-only)
+router.get('/:id/timeline', requireApplicationAccess, timelineController.getApplicationTimeline);
 
 // Candidate details (accessible to recruiters or assigned panel interviewers)
 router.get('/:id', requireApplicationAccess, applicationsController.getApplicationById);
