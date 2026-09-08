@@ -155,3 +155,14 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - Fetching tens of thousands of application records into application memory to calculate counts introduces serious memory bloat, high latency, and vulnerability to node process crashes.
   - Native PostgreSQL `GROUP BY` and indexed range aggregations execute in milliseconds and transmit only aggregated scalar results over the wire.
   - The 12-week applications trend generates a fixed array of 12 UTC week intervals, fetching only timestamp fields within the 12-week window (`appliedDate >= 12WeeksAgoStart`), guaranteeing bounded execution time and constant memory footprint.
+
+---
+
+## Decision 15: Stage-Specific Stalled Alert Dismissal via Relational Model (`AlertDismissal`)
+
+- **Chose**: Persisting alert dismissals in a dedicated `AlertDismissal` relational join table uniquely constrained on `(applicationId, stage)`, without polluting the immutable candidate timeline.
+- **Rejected**: Adding a global `isDismissed` boolean flag to the `Application` table or logging alert dismissals as `Timeline` events.
+- **Why**:
+  - In real-world recruiting operations, an application may legitimately stall multiple times across its lifecycle (e.g. stalled in `Screening`, reviewed and dismissed by a recruiter, advanced to `Interview`, and subsequently stalled waiting for interviewer scorecards). A global boolean flag on `Application` would either permanently silence future alerts or require complex stage-transition reset triggers.
+  - Using a composite unique index `@@unique([applicationId, stage])` guarantees that dismissing an alert is strictly scoped to the candidate's current stage and is completely idempotent. When the candidate advances to a new stage and stalls again, the new stage has no dismissal record and triggers a new active alert automatically.
+  - Candidate timelines (Phase 7) represent compliance-critical hiring actions (stage transitions, panel assignments, interviewer scorecards). Alert dismissals are transient UI notification preferences; logging dismissals into the timeline would inflate the audit trail with non-evaluative UI interactions. Keeping dismissals in `AlertDismissal` preserves timeline purity.

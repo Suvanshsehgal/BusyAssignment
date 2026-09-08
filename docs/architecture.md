@@ -372,6 +372,37 @@ Recruiter Client
    └─ Returns HTTP 200 OK with { status: 'success', data }
 ```
 
+### Flow L: Stalled Candidate SLA Alerts & Stage-Specific Dismissal (`GET /api/v1/alerts/*`, `POST /api/v1/alerts/:applicationId/dismiss`)
+```text
+Recruiter Client
+      │
+      ▼ (GET /api/v1/alerts, GET /api/v1/alerts/count, or POST /api/v1/alerts/:applicationId/dismiss)
+1. authenticate & requireRole('recruiter')
+   ├─ 401 Unauthorized if missing or invalid JWT
+   └─ 403 Forbidden if role is interviewer (recruiters only)
+      │
+      ▼
+2. alerts.controller.js
+   ├─ Dispatches to alerts.service.js
+   └─ Handles referenceDate parameter for boundary testing
+      │
+      ▼
+3. alerts.service.js (SLA Engine & Stage-Scoped Dismissal)
+   ├─ getStalledAlerts / getStalledAlertsCount:
+   │   ├─ Computes cutoff = now - 10 days
+   │   ├─ Queries applications where stageEnteredAt < cutoff AND stage NOT IN ('Rejected', 'Hired') AND jobOpening.status != 'Archived'
+   │   └─ Filters out applications with an existing AlertDismissal for app.stage
+   └─ dismissAlert:
+       ├─ Validates application exists (404 if missing)
+       ├─ Prohibits dismissal for terminal stages (400 if Rejected/Hired)
+       ├─ Persists AlertDismissal record with (applicationId, stage, dismissedById, dismissedAt)
+       └─ Guarantees zero writes to Phase 7 Timeline (timeline remains pure)
+      │
+      ▼
+4. Response Handler
+   └─ Returns HTTP 200 OK with active alerts list, badge count, or dismissal confirmation
+```
+
 ---
 
 ## 5. Append-Only Audit Architecture & Immutability Guarantees
@@ -415,6 +446,6 @@ Candidate timelines in PipelineHQ are designed around strict compliance and non-
 5. **In-Memory Aggregation, Filtering & Pagination**:
    - *Decision*: Never fetch the entire application dataset into Node.js application memory to compute KPIs, group stages, or paginate results using JavaScript arrays.
    - *Why*: Utilizing database-level `GROUP BY`, native counts, and date boundary indexes guarantees $O(1)$ memory usage and microsecond query execution times regardless of whether the database holds ten or ten million candidate records.
-6. **Premature Implementation of Phase 10 Stalled SLA Alerts**:
-   - *Decision*: Intentionally omitted Phase 10 stalled alerts (>10 days) and alert dismissals during Phase 9.
-   - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the analytics and reporting engines before layering SLA alerting rules and dismissal state machines.
+6. **Global Boolean Dismissal Flag on Application Record**:
+   - *Decision*: Adopted a stage-specific `AlertDismissal` relational model instead of a single `isDismissed` boolean flag on the Application table.
+   - *Why*: A candidate whose alert is dismissed in 'Screening' may legitimately stall again in 'Interview'. A global flag would permanently silence future alerts or require complex reset triggers on every transition. Stage-scoped dismissal guarantees clean, isolated suppression without state leakage or timeline modification.

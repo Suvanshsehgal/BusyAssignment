@@ -288,6 +288,53 @@ const stageCounts = applications.reduce((acc, app) => {
 - This pushes the aggregation down to PostgreSQL, returning only the 6 aggregated stage counts over the network.
 - For the 12-week applications trend, I calculated the 12 UTC week windows upfront so all 12 chronological buckets are guaranteed even when counts are zero, and queried only application timestamps within the 12-week window (`appliedDate >= oldestWindowStart`).
 
+---
+
+## 15. Stage-Specific Stalled Alert Dismissal vs. Global Flag (Phase 10)
+
+### Prompt
+> "How should I implement alert dismissal for stalled candidates? Should I add an `is_dismissed` boolean column on the `Application` table?"
+
+### What I got
+The AI suggested adding a simple boolean flag `isDismissed: Boolean @default(false)` directly onto the `Application` model:
+```javascript
+await prisma.application.update({
+  where: { id: applicationId },
+  data: { isDismissed: true },
+});
+```
+
+### What I corrected
+- Adding a single boolean flag on the application model creates state leakage across the hiring lifecycle. If a candidate stalls in `Screening` and the recruiter dismisses the alert, then when the candidate advances to `Interview` and subsequently stalls for another 12 days, the alert would stay permanently muted because `isDismissed` is still true.
+- Alternatively, trying to reset `isDismissed = false` on every stage move creates fragile coupling between the linear state machine and the alert subsystem.
+- I leveraged the dedicated `AlertDismissal` relational join model from Phase 2, which pairs `(applicationId, stage)` under a composite unique constraint `@@unique([applicationId, stage])`.
+- This ensures that dismissing an alert strictly silences alerts for the candidate's *current* stage. If the candidate advances to another stage and stalls again, a new alert is generated automatically without requiring reset triggers.
+
+---
+
+## 16. Audit Trail Immutability Protection During Operational Dismissals (Phase 10)
+
+### Prompt
+> "Should dismissing a stalled candidate alert create an audit event in the candidate's `Timeline` table?"
+
+### What I got
+The AI suggested creating a new `Timeline` event type `ALERT_DISMISSED` and recording every dismissal in the candidate audit timeline:
+```javascript
+await prisma.timeline.create({
+  data: {
+    applicationId,
+    eventType: 'ALERT_DISMISSED',
+    userId: recruiterId,
+  },
+});
+```
+
+### What I corrected
+- The candidate audit timeline established in Phase 7 is designed for legal, compliance, and regulatory hiring audits. It tracks genuine candidate evaluation milestones: application submission, sequential stage advances, rejections with preserved stage, reinstatements, interviewer assignments, and submitted scorecards.
+- Stalled candidate alert dismissals are transient operational UI preferences (acknowledging an alert on a dashboard), not an evaluative action on the candidate.
+- Polluting the immutable timeline with UI dismissal entries inflates audit logs and confuses hiring history.
+- I enforced that alert dismissals are written exclusively to `AlertDismissal`, preserving the zero-mutation, pure audit guarantee of the Phase 7 `Timeline` table.
+
 
 
 
