@@ -83,7 +83,7 @@ export const createApplication = async (
     });
 
     return newApp;
-  });
+  }, { maxWait: 10000, timeout: 20000 });
 
   return application;
 };
@@ -297,7 +297,7 @@ export const deleteApplication = async (id) => {
     await tx.timeline.deleteMany({ where: { applicationId: id } });
     await tx.alertDismissal.deleteMany({ where: { applicationId: id } });
     await tx.application.delete({ where: { id } });
-  });
+  }, { maxWait: 10000, timeout: 20000 });
 
   return { success: true };
 };

@@ -38,8 +38,9 @@ export const advanceApplication = async (
   const nextStage = determineNextStage(currentStage, requestedTargetStage);
   const now = new Date();
 
-  const updatedApplication = await prisma.$transaction(async (tx) => {
-    const updated = await tx.application.update({
+  const updatedApplication = await prisma.$transaction(
+    async (tx) => {
+      const updated = await tx.application.update({
       where: { id },
       data: {
         stage: nextStage,
@@ -74,8 +75,10 @@ export const advanceApplication = async (
       },
     });
 
-    return updated;
-  });
+      return updated;
+    },
+    { maxWait: 10000, timeout: 20000 }
+  );
 
   return updatedApplication;
 };
@@ -115,42 +118,45 @@ export const rejectApplication = async (
   const rejectionDetails = reason || notes || 'Application rejected';
   const now = new Date();
 
-  const updatedApplication = await prisma.$transaction(async (tx) => {
-    const updated = await tx.application.update({
-      where: { id },
-      data: {
-        stage: 'Rejected',
-        rejectedFromStage: currentStage,
-      },
-      include: {
-        jobOpening: {
-          select: {
-            id: true,
-            title: true,
-            department: true,
-            status: true,
+  const updatedApplication = await prisma.$transaction(
+    async (tx) => {
+      const updated = await tx.application.update({
+        where: { id },
+        data: {
+          stage: 'Rejected',
+          rejectedFromStage: currentStage,
+        },
+        include: {
+          jobOpening: {
+            select: {
+              id: true,
+              title: true,
+              department: true,
+              status: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    await tx.timeline.create({
-      data: {
-        applicationId: id,
-        eventType: 'APPLICATION_REJECTED',
-        oldStage: currentStage,
-        newStage: 'Rejected',
-        userId: userId || null,
-        details: {
-          rejectedFromStage: currentStage,
-          reason: rejectionDetails,
+      await tx.timeline.create({
+        data: {
+          applicationId: id,
+          eventType: 'APPLICATION_REJECTED',
+          oldStage: currentStage,
+          newStage: 'Rejected',
+          userId: userId || null,
+          details: {
+            rejectedFromStage: currentStage,
+            reason: rejectionDetails,
+          },
+          createdAt: now,
         },
-        createdAt: now,
-      },
-    });
+      });
 
-    return updated;
-  });
+      return updated;
+    },
+    { maxWait: 10000, timeout: 20000 }
+  );
 
   return updatedApplication;
 };
@@ -185,43 +191,46 @@ export const reinstateApplication = async (
   const targetStage = validateReinstatement(application);
   const now = new Date();
 
-  const updatedApplication = await prisma.$transaction(async (tx) => {
-    const updated = await tx.application.update({
-      where: { id },
-      data: {
-        stage: targetStage,
-        stageEnteredAt: now,
-        rejectedFromStage: null,
-      },
-      include: {
-        jobOpening: {
-          select: {
-            id: true,
-            title: true,
-            department: true,
-            status: true,
+  const updatedApplication = await prisma.$transaction(
+    async (tx) => {
+      const updated = await tx.application.update({
+        where: { id },
+        data: {
+          stage: targetStage,
+          stageEnteredAt: now,
+          rejectedFromStage: null,
+        },
+        include: {
+          jobOpening: {
+            select: {
+              id: true,
+              title: true,
+              department: true,
+              status: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    await tx.timeline.create({
-      data: {
-        applicationId: id,
-        eventType: 'APPLICATION_REINSTATED',
-        oldStage: 'Rejected',
-        newStage: targetStage,
-        userId: userId || null,
-        details: {
-          reinstatedToStage: targetStage,
-          notes: notes || `Reinstated candidate to ${targetStage}`,
+      await tx.timeline.create({
+        data: {
+          applicationId: id,
+          eventType: 'APPLICATION_REINSTATED',
+          oldStage: 'Rejected',
+          newStage: targetStage,
+          userId: userId || null,
+          details: {
+            reinstatedToStage: targetStage,
+            notes: notes || `Reinstated candidate to ${targetStage}`,
+          },
+          createdAt: now,
         },
-        createdAt: now,
-      },
-    });
+      });
 
-    return updated;
-  });
+      return updated;
+    },
+    { maxWait: 10000, timeout: 20000 }
+  );
 
   return updatedApplication;
 };
