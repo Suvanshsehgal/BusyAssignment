@@ -16,6 +16,16 @@ router.use(authenticate);
 router.post('/', requireRole('recruiter'), applicationsController.createApplication);
 router.get('/', requireRole('recruiter'), applicationsController.getApplications);
 
+// Recruiter-only CSV export (registered before parameterized /:id routes)
+router.get('/export-csv', requireRole('recruiter'), applicationsController.exportApplicationsCsv);
+router.get('/csv', requireRole('recruiter'), applicationsController.exportApplicationsCsv);
+
+// Recruiter-only bulk pipeline actions (registered before parameterized /:id routes)
+router.post('/bulk-advance', requireRole('recruiter'), applicationsController.bulkAdvanceApplications);
+router.patch('/bulk-advance', requireRole('recruiter'), applicationsController.bulkAdvanceApplications);
+router.post('/bulk-reject', requireRole('recruiter'), applicationsController.bulkRejectApplications);
+router.patch('/bulk-reject', requireRole('recruiter'), applicationsController.bulkRejectApplications);
+
 // Pipeline state machine transitions (recruiter-only)
 router.patch('/:id/advance', requireRole('recruiter'), applicationsController.advanceApplication);
 router.patch('/:id/reject', requireRole('recruiter'), applicationsController.rejectApplication);

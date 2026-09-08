@@ -16,14 +16,65 @@ export const createApplication = async (req, res, next) => {
 
 export const getApplications = async (req, res, next) => {
   try {
-    const { jobOpeningId, stage } = req.query;
-    const applications = await applicationsService.getApplications({ jobOpeningId, stage });
+    const result = await applicationsService.getApplications(req.query);
 
     res.status(200).json({
       status: 'success',
-      results: applications.length,
-      data: { applications },
+      data: result.data,
+      total_count: result.total_count,
+      page: result.page,
+      total_pages: result.total_pages,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkAdvanceApplications = async (req, res, next) => {
+  try {
+    const applicationIds = req.body.applicationIds || req.body.application_ids || req.body.ids;
+    const { notes } = req.body;
+    const result = await applicationsService.bulkAdvanceApplications({
+      applicationIds,
+      notes,
+      userId: req.user?.id,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const bulkRejectApplications = async (req, res, next) => {
+  try {
+    const applicationIds = req.body.applicationIds || req.body.application_ids || req.body.ids;
+    const { reason } = req.body;
+    const result = await applicationsService.bulkRejectApplications({
+      applicationIds,
+      reason,
+      userId: req.user?.id,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const exportApplicationsCsv = async (req, res, next) => {
+  try {
+    const csvContent = await applicationsService.exportApplicationsCsv(req.query);
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="applications.csv"');
+    res.status(200).send(csvContent);
   } catch (error) {
     next(error);
   }

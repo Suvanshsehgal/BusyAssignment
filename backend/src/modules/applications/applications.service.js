@@ -88,46 +88,134 @@ export const createApplication = async (
   return application;
 };
 
-export const getApplications = async ({ jobOpeningId, stage } = {}) => {
+export const getApplications = async (query = {}) => {
+  const {
+    search,
+    q,
+    jobOpeningId,
+    job_opening_id,
+    stage,
+    source,
+    sortBy,
+    sort_by,
+    sortOrder,
+    sort_order,
+    order,
+    direction,
+    page: rawPage,
+    limit: rawLimit,
+  } = query;
+
   const where = {};
 
-  if (jobOpeningId) {
-    where.jobOpeningId = jobOpeningId;
+  // 1. Text search across candidateName and email (case-insensitive)
+  const searchTerm = (search || q || '').trim();
+  if (searchTerm) {
+    where.OR = [
+      { candidateName: { contains: searchTerm, mode: 'insensitive' } },
+      { email: { contains: searchTerm, mode: 'insensitive' } },
+    ];
   }
 
-  if (stage) {
-    where.stage = stage;
+  // 2. Filter by jobOpeningId
+  const targetJobId = jobOpeningId || job_opening_id;
+  if (targetJobId && targetJobId.trim()) {
+    where.jobOpeningId = targetJobId.trim();
   }
 
-  const applications = await prisma.application.findMany({
-    where,
-    orderBy: { appliedDate: 'desc' },
-    include: {
-      jobOpening: {
-        select: {
-          id: true,
-          title: true,
-          department: true,
-          status: true,
+  // 3. Filter by stage
+  if (stage && stage.trim()) {
+    where.stage = stage.trim();
+  }
+
+  // 4. Filter by source
+  if (source && source.trim()) {
+    where.source = source.trim();
+  }
+
+  // 5. Server-side sorting
+  const sortKey = (sortBy || sort_by || 'appliedDate').trim();
+  const sortDir = (sortOrder || sort_order || order || direction || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+
+  let sortField = 'appliedDate';
+  if (sortKey === 'applied_date' || sortKey === 'appliedDate') {
+    sortField = 'appliedDate';
+  } else if (sortKey === 'stage') {
+    sortField = 'stage';
+  } else if (sortKey === 'updated_at' || sortKey === 'updatedAt') {
+    sortField = 'updatedAt';
+  } else if (sortKey === 'created_at' || sortKey === 'createdAt') {
+    sortField = 'createdAt';
+  } else if (sortKey === 'candidate_name' || sortKey === 'candidateName') {
+    sortField = 'candidateName';
+  }
+
+  const orderBy = [
+    { [sortField]: sortDir },
+    { id: 'asc' }, // deterministic secondary tie-breaker
+  ];
+
+  // 6. Pagination parameters
+  let page = parseInt(rawPage, 10);
+  if (Number.isNaN(page) || page < 1) {
+    page = 1;
+  }
+
+  let limit = parseInt(rawLimit, 10);
+  if (Number.isNaN(limit) || limit < 1) {
+    limit = 20;
+  } else if (limit > 100) {
+    limit = 100;
+  }
+
+  const skip = (page - 1) * limit;
+  const take = limit;
+
+  // Execute count and paginated query concurrently at database level
+  const [total_count, data] = await Promise.all([
+    prisma.application.count({ where }),
+    prisma.application.findMany({
+      where,
+      orderBy,
+      skip,
+      take,
+      include: {
+        jobOpening: {
+          select: {
+            id: true,
+            title: true,
+            department: true,
+            status: true,
+          },
         },
-      },
-      interviewPanels: {
-        include: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
+        interviewPanels: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    }),
+  ]);
 
-  return applications;
+  const total_pages = total_count === 0 ? 0 : Math.ceil(total_count / limit);
+
+  return {
+    data,
+    total_count,
+    page,
+    total_pages,
+  };
 };
+
+export * from './applications.bulk.js';
+export * from './applications.csv.js';
 
 export const getApplicationById = async (id) => {
   if (!id) {
