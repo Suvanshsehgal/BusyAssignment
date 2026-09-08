@@ -87,3 +87,14 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - Hardcoding sequential validation in a dedicated `pipeline.rules.js` module guarantees that no API consumer or script can bypass hiring protocols.
   - Storing `rejectedFromStage` at rejection time preserves candidate pipeline progress: if an offer fell through or headcount freezes lifted, the candidate is reinstated to the interview or offer stage where they left off, without destroying their interview evaluations or SLA history.
   - Every forward transition and reinstatement updates `stageEnteredAt: new Date()`, establishing an accurate baseline for SLA stalled-application calculations (>10 days) in subsequent phases.
+
+---
+
+## Decision 9: InterviewPanel Join Table as Single Source of Truth for Reviewer Access & Feedback
+
+- **Chose**: Enforcing interviewer access to candidate details, panel memberships, review portals (`/my-reviews`), and feedback submissions strictly through the relational `InterviewPanel` join table keyed on the cryptographically validated `req.user.id`.
+- **Rejected**: Accepting interviewer IDs from request query parameters, request bodies, or JWT custom claims, and rejected allowing recruiters to submit interviewer scorecards without panel relationship validation.
+- **Why**:
+  - In a compliant hiring system, candidate reviews and interview scorecards must be legally defensible. Storing interviewer identities directly from `req.user.id` eliminates impersonation and user-ID spoofing.
+  - Allowing clients to pass a user ID in query strings (e.g. `GET /api/v1/my-reviews?userId=...`) would introduce severe IDOR vulnerabilities where any authenticated interviewer could view unassigned candidates and confidential evaluations.
+  - Checking `InterviewPanel` at the resource-authorization layer (`requireApplicationAccess`) guarantees immediate consistency: if a recruiter removes an interviewer from a panel (`DELETE /api/v1/applications/:id/panel/:userId`), the interviewer's access to view details or submit feedback is revoked instantly without waiting for JWT token expiration.

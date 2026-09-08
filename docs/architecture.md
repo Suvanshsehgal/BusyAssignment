@@ -208,6 +208,48 @@ Recruiter Client
                                        │            └─ newStage: prior stage
 ```
 
+### Flow E: Panel Assignment & Removal (`POST .../panel` & `DELETE .../panel/:userId`)
+```text
+Recruiter Client
+      │
+      ▼ (POST /api/v1/applications/:id/panel with Bearer token)
+1. authenticate & requireRole('recruiter')
+   └─ Only authenticated recruiters can modify panel assignments (403 if interviewer)
+      │
+      ▼
+2. panels.service.js (assignPanel)
+   ├─ Validates Application exists (404 if missing)
+   ├─ Queries target User records from database:
+   │   ├─ 404 if user not found
+   │   └─ 400 Bad Request if user.role !== 'interviewer' (never trusts client roles)
+   ├─ Checks existing assignments in InterviewPanel (400 if duplicate)
+   └─ In atomic prisma.$transaction:
+       ├─ Creates InterviewPanel rows
+       └─ Creates INTERVIEWER_ASSIGNED timeline events
+```
+
+### Flow F: Interviewer Portal & Feedback Submission
+```text
+Interviewer Client
+      │
+      ├───────────────────────────────┬───────────────────────────────┐
+      ▼ (GET /api/v1/my-reviews)      │                               ▼ (POST /.../:id/feedback)
+1. authenticate &                     │ 1. authenticate &
+   requireRole('interviewer')         │    requireRole('interviewer')
+      │                               │       │
+      ▼                               │       ▼
+2. reviews.service.js (getMyReviews)  │ 2. requireApplicationAccess
+   ├─ Derives ID strictly from        │    └─ Queries InterviewPanel[id, req.user.id]
+   │  req.user.id (never client body) │       (403 Forbidden if not assigned)
+   └─ Queries InterviewPanel:         │       │
+       └─ Returns ONLY candidates     │       ▼
+          assigned to this user       │ 3. feedback.service.js (createFeedback)
+                                      │    ├─ Validates content & score (1-5)
+                                      │    └─ In atomic prisma.$transaction:
+                                      │        ├─ Creates Feedback row
+                                      │        └─ Appends FEEDBACK_SUBMITTED timeline
+```
+
 ---
 
 ## 5. What did you decide *not* to build, and why?
@@ -218,6 +260,9 @@ Recruiter Client
 2. **Client-Trusted Role Claims & Stage Overrides**:
    - *Decision*: Never trust client-provided roles, user IDs, or arbitrary target stages.
    - *Why*: The candidate progression engine is strictly server-enforced (`Applied → Screening → Interview → Offer → Hired`). The server deterministically calculates the single valid next stage, preventing clients or rogue scripts from jumping stages.
-3. **Premature Implementation of Future Phase APIs**:
-   - *Decision*: Intentionally omitted Interview Panel assignment APIs, reviewer scorecards (`/my-reviews`), standalone Timeline query APIs, bulk candidate actions, CSV exports, SLA stall alerts, and analytics dashboards during Phase 5.
-   - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the core pipeline state machine before layering interview workflows and alerting engines.
+3. **Client-Filtered Interviewer Candidates**:
+   - *Decision*: Never accept user IDs or interviewer filters from the frontend in `/my-reviews` or feedback submissions.
+   - *Why*: Interviewer identity is derived strictly from the verified `req.user.id` on the server, guaranteeing that interviewers cannot spoof identities or inspect evaluations for unassigned candidates.
+4. **Premature Implementation of Future Phase APIs**:
+   - *Decision*: Intentionally omitted standalone Timeline query APIs, bulk candidate actions, CSV exports, SLA stall alerts, and analytics dashboards during Phase 6.
+   - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the core ATS foundation before layering alerting engines and reporting dashboards.

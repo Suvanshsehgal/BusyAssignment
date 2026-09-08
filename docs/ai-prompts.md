@@ -103,3 +103,61 @@ details: {
 - The variable storing the calculated destination stage was named `nextStage`, but the AI's snippet used shorthand `{ newStage }`.
 - I caught this immediately during test execution, traced the stack trace to `pipeline.service.js`, and corrected the identifier to `newStage: nextStage`. All 33 state machine tests passed immediately afterward.
 
+---
+
+## 6. Preventing Identity Spoofing on `/my-reviews` (Phase 6 IDOR Vulnerability)
+
+### Prompt
+> "How should I query assigned candidate applications for the interviewer review portal at `GET /api/v1/my-reviews`?"
+
+### What I got
+The AI suggested this query pattern:
+```javascript
+export const getMyReviews = async (req, res) => {
+  const interviewerId = req.query.userId || req.user.id;
+  const reviews = await prisma.interviewPanel.findMany({
+    where: { userId: interviewerId },
+    include: { application: true }
+  });
+  res.json(reviews);
+};
+```
+
+### What I corrected
+- Allowing `req.query.userId` to override `req.user.id` is an Insecure Direct Object Reference (IDOR) flaw. Any interviewer could change the URL parameter to view another interviewer's assigned candidates and evaluations.
+- I corrected this by completely ignoring any client query parameters or request body values. The query strictly derives the interviewer ID from `req.user.id` verified by our JWT authentication middleware.
+- I also enforced `requireRole('interviewer')`, rejecting recruiters with a 403 Forbidden response to maintain role separation.
+
+---
+
+## 7. Feedback Authorization & Input Validation (Phase 6)
+
+### Prompt
+> "How do I secure `POST /api/v1/applications/:id/feedback` so only interviewers can submit interview feedback?"
+
+### What I got
+The AI suggested placing `requireRole('interviewer')` on the route and letting any user with the interviewer role submit feedback for any application.
+
+### What I corrected
+- Merely checking `role === 'interviewer'` was insufficient. An interviewer should only be able to submit feedback for candidates **specifically assigned to their interview panel**.
+- Instead of writing redundant database queries, I reused our candidate-level authorization middleware (`requireApplicationAccess`) combined with `requireRole('interviewer')`. This ensures:
+  1. Recruiters cannot submit interview scorecards (403 Forbidden).
+  2. Unassigned interviewers cannot submit feedback for candidates they aren't interviewing (403 Forbidden).
+  3. Only assigned panel interviewers can submit scorecards.
+- I also added strict schema validation for the feedback payload: checking that `content` is a non-empty string between 3 and 10,000 characters, and that optional `score` is an integer between 1 and 5.
+
+---
+
+## 8. Fixing Prisma Transaction Timeout Over Network Latency (Phase 6 Bug Correction)
+
+### Prompt
+> "Prisma throws `Transaction API error: Transaction already closed: A query cannot be executed on an expired transaction. The timeout for this transaction was 5000 ms, however 7059 ms passed`. Why is this happening and how do I fix it?"
+
+### What I got
+The AI suggested removing `prisma.$transaction` entirely and running the operations as separate, non-transactional `await` statements so timeouts wouldn't occur.
+
+### What I corrected
+- Removing transactions was a bad idea: if the application updates but the timeline audit log fails, the database ends up in a partially updated, inconsistent state.
+- The root cause was that Supabase is hosted remotely (Singapore), and executing multiple sequential queries within a single interactive transaction over WAN exceeded Prisma's default 5000ms limit.
+- Instead of sacrificing ACID atomicity, I kept the transactions intact and explicitly configured Prisma's interactive transaction options: `{ maxWait: 10000, timeout: 20000 }`. This gave the transaction sufficient buffer for network roundtrips and completely resolved the timeouts.
+
