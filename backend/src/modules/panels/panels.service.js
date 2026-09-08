@@ -8,11 +8,11 @@ import { validateInterviewerRole } from '../../middleware/requireApplicationAcce
  * Prevents duplicate assignments.
  *
  * @param {string} applicationId
- * @param {object} payload { userId, userIds, interviewerId }
+ * @param {object} payload { userId, userIds, interviewerId, scheduledAt }
  * @param {string} actorId Recruiter performing the assignment
  * @returns {Promise<Array>} The updated interview panel
  */
-export const assignPanel = async (applicationId, { userId, userIds, interviewerId } = {}, actorId) => {
+export const assignPanel = async (applicationId, { userId, userIds, interviewerId, scheduledAt } = {}, actorId) => {
   if (!applicationId) {
     throw new AppError('Application ID is required.', 400);
   }
@@ -79,6 +79,7 @@ export const assignPanel = async (applicationId, { userId, userIds, interviewerI
         data: {
           applicationId,
           userId: uid,
+          scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
           assignedAt: now,
         },
       });

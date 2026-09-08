@@ -1,4 +1,4 @@
-﻿import 'dotenv/config';
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -201,8 +201,8 @@ async function main() {
   });
   await prisma.interviewPanel.createMany({
     data: [
-      { applicationId: app3.id, userId: alexInterviewer.id, assignedAt: daysAgo(12) },
-      { applicationId: app3.id, userId: priyaInterviewer.id, assignedAt: daysAgo(12) },
+      { applicationId: app3.id, userId: alexInterviewer.id, assignedAt: daysAgo(12), scheduledAt: daysAgo(10) },
+      { applicationId: app3.id, userId: priyaInterviewer.id, assignedAt: daysAgo(12), scheduledAt: daysAgo(9) },
     ],
   });
   await prisma.feedback.createMany({
@@ -279,7 +279,7 @@ async function main() {
     },
   });
   await prisma.interviewPanel.create({
-    data: { applicationId: app4.id, userId: davidInterviewer.id, assignedAt: daysAgo(10) },
+    data: { applicationId: app4.id, userId: davidInterviewer.id, assignedAt: daysAgo(10), scheduledAt: daysAgo(2) },
   });
   await prisma.feedback.create({
     data: {

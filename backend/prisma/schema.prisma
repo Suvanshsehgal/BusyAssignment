@@ -101,6 +101,7 @@ model InterviewPanel {
   id            String      @id @default(uuid())
   applicationId String
   userId        String
+  scheduledAt   DateTime?
   assignedAt    DateTime    @default(now())
   createdAt     DateTime    @default(now())
 
@@ -110,6 +111,7 @@ model InterviewPanel {
   @@unique([applicationId, userId])
   @@index([applicationId])
   @@index([userId])
+  @@index([scheduledAt])
 }
 
 model Feedback {
