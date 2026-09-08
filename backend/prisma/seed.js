@@ -201,7 +201,7 @@ async function main() {
   });
   await prisma.interviewPanel.createMany({
     data: [
-      { applicationId: app3.id, userId: alexInterviewer.id, assignedAt: daysAgo(12), scheduledAt: daysAgo(10) },
+      { applicationId: app3.id, userId: alexInterviewer.id, assignedAt: daysAgo(12), scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000) }, // Tomorrow (current week)
       { applicationId: app3.id, userId: priyaInterviewer.id, assignedAt: daysAgo(12), scheduledAt: daysAgo(9) },
     ],
   });
@@ -418,7 +418,53 @@ async function main() {
     ],
   });
 
-  console.log('Seeded 8 candidate applications across all stages with panels, feedback, timeline events, and alert dismissals.');
+  // App 9: Reinstated Candidate (Demonstrates Rejection -> Reinstatement lifecycle)
+  const app9 = await prisma.application.create({
+    data: {
+      candidateName: 'Iris West',
+      email: 'iris.west@example.com',
+      source: 'LinkedIn',
+      notes: 'Initially rejected due to hiring freeze on design team; reinstated when headcount reopened.',
+      jobOpeningId: designJob.id,
+      stage: 'Screening',
+      rejectedFromStage: null,
+      appliedDate: daysAgo(28),
+      stageEnteredAt: daysAgo(3),
+    },
+  });
+  await prisma.timeline.createMany({
+    data: [
+      { applicationId: app9.id, eventType: 'APPLICATION_CREATED', newStage: 'Applied', userId: sarahRecruiter.id, createdAt: daysAgo(28) },
+      { applicationId: app9.id, eventType: 'STAGE_CHANGED', oldStage: 'Applied', newStage: 'Screening', userId: sarahRecruiter.id, createdAt: daysAgo(22) },
+      { applicationId: app9.id, eventType: 'APPLICATION_REJECTED', oldStage: 'Screening', newStage: 'Rejected', userId: marcusRecruiter.id, details: { reason: 'Temporary hiring freeze', rejectedFromStage: 'Screening' }, createdAt: daysAgo(14) },
+      { applicationId: app9.id, eventType: 'APPLICATION_REINSTATED', oldStage: 'Rejected', newStage: 'Screening', userId: sarahRecruiter.id, details: { reinstatedToStage: 'Screening', reason: 'Headcount reauthorized' }, createdAt: daysAgo(3) },
+    ],
+  });
+
+  // App 10: Applied Stage Stalled Candidate (Stalled 15 days in initial Applied stage)
+  const app10 = await prisma.application.create({
+    data: {
+      candidateName: 'James Gordon',
+      email: 'james.gordon@example.com',
+      source: 'Careers Page',
+      notes: 'Applied during holiday break; pending initial resume review.',
+      jobOpeningId: engJob.id,
+      stage: 'Applied',
+      appliedDate: daysAgo(15),
+      stageEnteredAt: daysAgo(15), // Stalled 15 days in Applied
+    },
+  });
+  await prisma.timeline.create({
+    data: {
+      applicationId: app10.id,
+      eventType: 'APPLICATION_CREATED',
+      newStage: 'Applied',
+      userId: sarahRecruiter.id,
+      createdAt: daysAgo(15),
+    },
+  });
+
+  console.log('Seeded 10 candidate applications across all stages with panels, feedback, timeline events, and alert dismissals.');
   console.log('Database seeding successfully finished!');
 }
 
