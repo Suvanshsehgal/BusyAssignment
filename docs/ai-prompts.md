@@ -335,6 +335,62 @@ await prisma.timeline.create({
 - Polluting the immutable timeline with UI dismissal entries inflates audit logs and confuses hiring history.
 - I enforced that alert dismissals are written exclusively to `AlertDismissal`, preserving the zero-mutation, pure audit guarantee of the Phase 7 `Timeline` table.
 
+---
 
+## 17. Zero-Account Public Candidate Intake Architecture (Phase 11)
 
+### Prompt
+> "I need to add a public careers portal where external job seekers can view open jobs and apply. How should candidate authentication and account creation be modeled?"
 
+### What I got
+The AI suggested creating a new `Candidate` user model with email/password authentication, a separate candidate registration route (`POST /api/v1/auth/candidate/register`), candidate JWT tokens with role `'candidate'`, and a candidate dashboard where they can log in to check application status:
+```javascript
+// AI suggestion: Candidate auth schema
+model Candidate {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  applications Application[]
+}
+```
+
+### What I corrected
+- Introducing candidate accounts, logins, passwords, JWT tokens, and password reset flows introduces significant friction for applicants, increases security attack surfaces, and complicates authentication middleware unnecessarily.
+- Candidate self-application should be frictionless, unauthenticated, and form-based: candidates browse open jobs, submit their details (`candidateName`, `email`, `notes`), and receive an immediate confirmation.
+- Candidates do not log in, do not receive tokens, and have no candidate dashboard.
+- Kept internal recruiter endpoints (`POST /api/v1/applications`) strictly authenticated and RBAC-enforced, creating a clean, separate public `/api/v1/careers` module that allows external applicants to apply without compromising internal system security.
+
+---
+
+## 18. Public Form Rate Limiting & PII Protection in Audit Trail (Phase 11)
+
+### Prompt
+> "Write the public application submission endpoint `POST /api/v1/careers/jobs/:id/apply` using Prisma and Express."
+
+### What I got
+The AI provided a controller handler that directly created the application and recorded the candidate's name and email in the timeline `details` JSON:
+```javascript
+const application = await prisma.application.create({
+  data: {
+    candidateName,
+    email,
+    jobOpeningId,
+    source: req.body.source || 'Website',
+    stage: req.body.stage || 'Applied',
+  }
+});
+await prisma.timeline.create({
+  data: {
+    applicationId: application.id,
+    eventType: 'APPLICATION_CREATED',
+    details: { candidateName, email, notes }
+  }
+});
+```
+
+### What I corrected
+1. **Client Parameter Tampering**: Allowing `req.body.source` and `req.body.stage` let clients inject custom sources or bypass the pipeline by applying directly into `Screening` or `Offer`. I hardcoded `source = 'Careers Page'` and `stage = 'Applied'`.
+2. **PII Duplication in Audit Logs**: Storing candidate email and full name inside the free-form `details` JSON duplicates PII across tables and complicates GDPR/CCPA data scrubbing. The `Application` table already holds name and email; the timeline event should record only contextual operational metadata (`{ notes, source: 'Careers Page' }`).
+3. **Duplicate Submission Protection**: The AI omitted duplicate protection. I introduced an explicit query checking if an application with the same `(email, jobOpeningId)` already exists, returning `409 Conflict` with a clear message.
+4. **Spam & Flooding Protection**: Public unauthenticated POST endpoints are prime targets for automated spam bots. I implemented a sliding-window in-memory rate limiter restricting submissions from an IP to 10 requests per 15 minutes, while leaving internal recruiter APIs completely unthrottled.

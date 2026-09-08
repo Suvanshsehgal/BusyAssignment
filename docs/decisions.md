@@ -166,3 +166,25 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - In real-world recruiting operations, an application may legitimately stall multiple times across its lifecycle (e.g. stalled in `Screening`, reviewed and dismissed by a recruiter, advanced to `Interview`, and subsequently stalled waiting for interviewer scorecards). A global boolean flag on `Application` would either permanently silence future alerts or require complex stage-transition reset triggers.
   - Using a composite unique index `@@unique([applicationId, stage])` guarantees that dismissing an alert is strictly scoped to the candidate's current stage and is completely idempotent. When the candidate advances to a new stage and stalls again, the new stage has no dismissal record and triggers a new active alert automatically.
   - Candidate timelines (Phase 7) represent compliance-critical hiring actions (stage transitions, panel assignments, interviewer scorecards). Alert dismissals are transient UI notification preferences; logging dismissals into the timeline would inflate the audit trail with non-evaluative UI interactions. Keeping dismissals in `AlertDismissal` preserves timeline purity.
+
+---
+
+## Decision 16: Public Candidate Self-Application Architecture Without Candidate Accounts
+
+- **Chose**: Exposing dedicated, unauthenticated public endpoints (`/api/v1/careers/jobs` and `/api/v1/careers/jobs/:id/apply`) that allow candidates to view open jobs and apply without requiring account creation, login, passwords, or candidate dashboards.
+- **Rejected**: Requiring candidates to register with email/password, issue candidate JWTs, or create a candidate-facing portal.
+- **Why**:
+  - **End-to-End Prototype Workflow**: This public careers flow was introduced so candidates can easily apply and register their interest directly, enabling a complete, unbroken end-to-end workflow for the prototype. Users and evaluators can experience the full ATS lifecycle starting from an external applicant discovering an open role, submitting an application, and having it appear immediately in the recruiter pipeline for screening, panel interview scheduling, scorecards, and hiring.
+  - Modern recruiting best practices prioritize low applicant drop-off rates. Requiring credentials, email verification links, or password setups before applying creates severe friction.
+  - Internal recruiter routes (`/api/v1/applications`) remain strictly protected by `authenticate` and `requireRole('recruiter')`, maintaining complete RBAC separation between public candidate submissions and internal recruiter workflows.
+  - Public submissions enforce server-derived attributes: `source` is unconditionally set to `'Careers Page'`, initial `stage` is locked to `'Applied'`, and timeline actor `userId` is recorded as `null` to reflect an external public submission. Candidate PII (name, email) is stored on the application entity rather than duplicated in timeline JSON metadata.
+
+---
+
+## Decision 17: Duplicate Application Protection & In-Memory Rate Limiting
+
+- **Chose**: Enforcing duplicate application detection per email and job opening (`HTTP 409 Conflict`), paired with a lightweight zero-dependency sliding-window in-memory rate limiter on public application endpoints.
+- **Rejected**: Permitting unbounded duplicate applications or adding heavy external rate-limiting dependencies.
+- **Why**:
+  - Candidates occasionally double-click submit buttons or re-apply multiple times in quick succession. Without duplicate protection, recruiter pipelines would fill with redundant candidate scorecards and fragmented reviews. Returning a structured `409 Conflict` informs the applicant while keeping the pipeline clean.
+  - Public submission endpoints are naturally exposed to bot spam and denial-of-wallet/denial-of-service attempts. The in-memory sliding-window limiter throttles abusive IPs (10 requests per 15 minutes) with HTTP 429 without placing any rate-limiting constraints on internal recruiter or interviewer APIs.

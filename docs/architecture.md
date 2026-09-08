@@ -403,6 +403,41 @@ Recruiter Client
    └─ Returns HTTP 200 OK with active alerts list, badge count, or dismissal confirmation
 ```
 
+### Flow M: Public Careers Page & Candidate Self-Application (`GET /api/v1/careers/*`, `POST /api/v1/careers/jobs/:id/apply`)
+> **Prototype Workflow Rationale**: This public careers intake flow was introduced so candidates can seamlessly apply and register their interest, enabling a complete end-to-end prototype workflow—from public job discovery and candidate intake to recruiter pipeline screening, panel interview scheduling, scorecards, and final hiring.
+
+```text
+Public Candidate Browser
+      │
+      ▼ (Unauthenticated: GET /careers/jobs, GET /careers/jobs/:id, POST /careers/jobs/:id/apply)
+1. publicApplicationRateLimiter Middleware
+   ├─ In-memory sliding-window limiter (10 requests per 15 mins per IP)
+   └─ Rejects abusive bursts with HTTP 429 Too Many Requests
+      │
+      ▼
+2. careers.controller.js & careers.service.js
+   ├─ GET /jobs: Queries prisma.jobOpening.findMany where status = 'Open' (Closed/Archived excluded)
+   ├─ GET /jobs/:id: Queries job by ID; returns 404 if missing or status != 'Open'
+   └─ POST /jobs/:id/apply:
+       ├─ Validates candidateName and regex-checked email (400 Bad Request)
+       ├─ Validates target job exists and status === 'Open' (400 if Closed or Archived)
+       ├─ Duplicate Guard: Checks if (email, jobOpeningId) exists -> returns 409 Conflict
+       ├─ Anti-Spoofing: Forces source = 'Careers Page', stage = 'Applied', userId = null
+       └─ Atomic Prisma interactive transaction (prisma.$transaction):
+           ├─ prisma.application.create():
+           │   └─ candidateName, normalized email, notes, jobOpeningId, source, stage: 'Applied'
+           └─ prisma.timeline.create():
+               ├─ applicationId: application.id
+               ├─ eventType: 'APPLICATION_CREATED'
+               ├─ newStage: 'Applied'
+               ├─ userId: null (no authenticated internal recruiter)
+               └─ details: { source: 'Careers Page', jobTitle } (PII protected: name & email omitted)
+      │
+      ▼
+3. Response Handler
+   └─ Returns HTTP 201 Created with { status: 'success', message: 'Application submitted successfully.', data: { application } }
+```
+
 ---
 
 ## 5. Append-Only Audit Architecture & Immutability Guarantees
@@ -411,11 +446,11 @@ Candidate timelines in PipelineHQ are designed around strict compliance and non-
 
 1. **Internally Generated, Never Client-Supplied**:
    - There are **no public timeline creation endpoints** (`POST /api/v1/timeline` or `POST /api/v1/applications/:id/timeline` do not exist).
-   - Timeline events are generated **strictly internally** by domain business services (`applications.service.js`, `pipeline.service.js`, `panels.service.js`, `feedback.service.js`) when legitimate state transitions or evaluations succeed.
+   - Timeline events are generated **strictly internally** by domain business services (`applications.service.js`, `pipeline.service.js`, `panels.service.js`, `feedback.service.js`, `careers.service.js`) when legitimate state transitions or evaluations succeed.
    - Clients cannot supply event payloads, timestamps, previous stages, or new stages.
 
 2. **Server-Enforced Actor Integrity**:
-   - The actor (`userId`) attributed to each timeline event is derived strictly from the cryptographically verified `req.user.id`.
+   - The actor (`userId`) attributed to each timeline event is derived strictly from the cryptographically verified `req.user.id` (or `null` for public candidate self-applications).
    - Any client-supplied parameters in request bodies attempting to spoof the actor (e.g. `{ userId: "other-user", actorId: "..." }`) are discarded.
 
 3. **Atomic Transaction Guarantees**:
@@ -449,3 +484,6 @@ Candidate timelines in PipelineHQ are designed around strict compliance and non-
 6. **Global Boolean Dismissal Flag on Application Record**:
    - *Decision*: Adopted a stage-specific `AlertDismissal` relational model instead of a single `isDismissed` boolean flag on the Application table.
    - *Why*: A candidate whose alert is dismissed in 'Screening' may legitimately stall again in 'Interview'. A global flag would permanently silence future alerts or require complex reset triggers on every transition. Stage-scoped dismissal guarantees clean, isolated suppression without state leakage or timeline modification.
+7. **Candidate User Accounts, Passwords, or Logins**:
+   - *Decision*: Kept candidate application submission completely unauthenticated and stateless without candidate login, password hashing, or candidate dashboards.
+   - *Why*: This public flow was introduced so candidates can easily apply and register their interest, enabling a complete, friction-free end-to-end workflow for the prototype. Forcing external job seekers to create passwords and verify accounts introduces unnecessary barrier-to-entry and high drop-off rates. Public endpoints are secured against spam using in-memory sliding-window rate limiting, duplicate email protection, and strict server-side validation.
