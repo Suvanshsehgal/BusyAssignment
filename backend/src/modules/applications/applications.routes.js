@@ -3,6 +3,7 @@ import * as applicationsController from './applications.controller.js';
 import * as panelsController from '../panels/panels.controller.js';
 import * as feedbackController from '../feedback/feedback.controller.js';
 import * as timelineController from '../timeline/timeline.controller.js';
+import * as alertsController from '../alerts/alerts.controller.js';
 import { authenticate } from '../../middleware/authenticate.js';
 import { requireRole } from '../../middleware/requireRole.js';
 import { requireApplicationAccess } from '../../middleware/requireApplicationAccess.js';
@@ -54,5 +55,9 @@ router.get('/:id', requireApplicationAccess, applicationsController.getApplicati
 // Candidate metadata updates & safe deletion (recruiter-only)
 router.patch('/:id', requireRole('recruiter'), applicationsController.updateApplication);
 router.delete('/:id', requireRole('recruiter'), applicationsController.deleteApplication);
+
+// Stalled candidate alert dismissal for candidate's current stage (recruiter-only)
+router.post('/:id/dismiss-alert', requireRole('recruiter'), alertsController.dismissAlert);
+router.post('/:id/alerts/dismiss', requireRole('recruiter'), alertsController.dismissAlert);
 
 export default router;
