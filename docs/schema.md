@@ -145,6 +145,11 @@ Records stage-specific alert dismissals by recruiters for stalled applications (
 - **Role Verification on Assignment**: Ensuring only users with `role === 'interviewer'` are assigned to `InterviewPanel` rows.
 - **Timeline Immutability & Internal Generation**: The application layer exposes no public creation, update, or deletion endpoints for `Timeline` records. Timeline events are strictly append-only, created internally within atomic database transactions by domain services, and queried read-only via `GET /api/v1/applications/:id/timeline`.
 - **Interviewer Access Boundaries**: Ensuring interviewers can only query and submit feedback for applications where their `userId` exists in `InterviewPanel`.
+- **Public Candidate Self-Application Constraints**:
+  - Unauthenticated submissions are strictly restricted to `JobOpening` records where `status === 'Open'`. Inactive (`Closed` or `Archived`) positions return 404.
+  - Active duplicate protection: The service validates `(email, jobOpeningId)` and rejects duplicate applications with HTTP 409 Conflict.
+  - Server-enforced provenance: The candidate source is unconditionally hardcoded to `"Careers Page"` and the initial stage to `"Applied"`, ignoring any client-provided tampering.
+  - System actor attribution: Timeline events for public self-applications record `userId: null`, indicating an unauthenticated external submission.
 
 ---
 
