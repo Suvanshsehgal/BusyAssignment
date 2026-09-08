@@ -110,3 +110,26 @@ This document logs architectural and engineering decisions that shaped the Pipel
   - If recruiters or administrators could edit or delete audit logs through API endpoints, the audit trail ceases to be reliable or legally defensible.
   - Deriving the actor strictly from `req.user.id` and generating event records within the same `prisma.$transaction` as the business operation guarantees non-repudiation and prevents orphaned or desynchronized audit events.
   - Ordering events deterministically by `createdAt ASC` with a secondary sort on `id ASC` guarantees consistent, tamper-evident chronological presentation across client platforms.
+
+---
+
+## Decision 11: Database-Level Server-Side Filtering, Sorting, and Pagination
+
+- **Chose**: Pushing all text search, stage/job/source filtering, field sorting, total counting, and window pagination (`skip` and `take`) directly down to the PostgreSQL database layer via Prisma.
+- **Rejected**: Fetching all candidate applications into Node.js runtime memory and slicing/filtering arrays in application memory.
+- **Why**:
+  - In-memory pagination collapses under production hiring loads: retrieving 50,000 application rows to display 20 candidates consumes massive memory buffers, degrades garbage collection, and creates unscalable WAN transfer latency.
+  - PostgreSQL evaluates indexed queries with sub-millisecond efficiency. Concurrently querying `prisma.application.count` and `prisma.application.findMany` with pagination bounds memory usage to $O(limit)$ rather than $O(N)$.
+  - Standardizing the response contract to `{ data, total_count, page, total_pages }` gives frontend data grids complete metadata to render accurate pagination controls.
+
+---
+
+## Decision 12: Independent Per-Candidate Transactions for Bulk Pipeline Actions
+
+- **Chose**: Processing each candidate in a bulk advance or bulk reject request within its own isolated, atomic transaction, returning detailed `{ successful, failed }` result sets.
+- **Rejected**: Wrapping an entire batch of multiple candidate operations in a single monolithic transaction that rolls back all candidates if a single candidate is invalid.
+- **Why**:
+  - In recruiter workflows, bulk actions often target candidate lists where one candidate might have already been moved by a colleague, rejected, or reached the `Hired` stage.
+  - An all-or-nothing transaction would mean a single edge-case failure blocks progress for 50 valid candidates, causing extreme recruiter frustration.
+  - By isolating each candidate transition in its own `prisma.$transaction`, valid applications advance and record immutable timeline events, while invalid candidates fail individually with clear, human-readable explanations.
+  - Handing bulk actions on the backend prevents partial network failures and client-side retry storms that occur when frontends attempt to fire dozens of parallel requests.

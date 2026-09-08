@@ -274,6 +274,69 @@ Authenticated Client (Recruiter or Assigned Interviewer)
    └─ Returns immutable event history
 ```
 
+### Flow H: Server-Side Search, Filter, Sort, and Paginated Listing (`GET /api/v1/applications`)
+```text
+Recruiter Client
+      │
+      ▼ (GET /api/v1/applications?search=...&stage=...&sortBy=...&page=...&limit=...)
+1. authenticate & requireRole('recruiter')
+   └─ Interviewers rejected with 403 Forbidden (maintains pipeline isolation)
+      │
+      ▼
+2. applications.service.js (getApplications)
+   ├─ Builds Prisma where clause at database level:
+   │   ├─ Case-insensitive text search (candidateName OR email ILIKE)
+   │   ├─ Filtering: jobOpeningId, stage, source
+   ├─ Resolves sort direction & field: appliedDate, stage, updatedAt, candidateName
+   │   (with deterministic secondary sort on id ASC)
+   ├─ Computes pagination window: skip = (page - 1) * limit, take = limit
+   ├─ Concurrently queries database via Promise.all([ prisma.application.count, prisma.application.findMany ])
+   │   (zero in-memory filtering or array splicing)
+   └─ Returns standardized response: { data, total_count, page, total_pages }
+```
+
+### Flow I: Bulk Pipeline Operations (`POST /api/v1/applications/bulk-advance` & `POST /.../bulk-reject`)
+```text
+Recruiter Client
+      │
+      ▼ (POST /bulk-advance or /bulk-reject with applicationIds: [...])
+1. authenticate & requireRole('recruiter')
+   └─ Strictly recruiter-only (403 Forbidden for interviewers)
+      │
+      ▼
+2. applications.service.js (bulkAdvanceApplications / bulkRejectApplications)
+   ├─ Validates non-empty array of application UUIDs (400 if empty/invalid)
+   ├─ Iterates through applicationIds independently:
+   │   ├─ Candidate 1 (Valid):
+   │   │   └─ Executes atomic transaction → updates stage → writes Timeline event → added to `successful`
+   │   ├─ Candidate 2 (Invalid - e.g. already Hired or Rejected):
+   │   │   └─ Catches operational error → transaction rolled back → added to `failed` with clear reason
+   │   │      (ONE FAILURE NEVER FAILS THE REST OF THE BATCH)
+   │   └─ Candidate 3 (Valid):
+   │       └─ Executes atomic transaction → updates stage → writes Timeline event → added to `successful`
+   └─ Returns comprehensive results: { total, succeeded_count, failed_count, successful, failed }
+```
+
+### Flow J: Server-Side RFC 4180 CSV Export (`GET /api/v1/applications/export-csv`)
+```text
+Recruiter Client
+      │
+      ▼ (GET /api/v1/applications/export-csv with optional filters)
+1. authenticate & requireRole('recruiter')
+   └─ Strictly recruiter-only (403 Forbidden for interviewers)
+      │
+      ▼
+2. applications.service.js (exportApplicationsCsv)
+   ├─ Queries applications (defaults to active pipeline stages, excluding Rejected and Hired)
+   ├─ Eagerly loads associated JobOpening details (title, department)
+   ├─ Formats rows according to RFC 4180:
+   │   └─ Escapes double quotes (" -> "") and wraps fields containing commas, newlines, or quotes
+   ├─ Sets HTTP response headers:
+   │   ├─ Content-Type: text/csv; charset=utf-8
+   │   └─ Content-Disposition: attachment; filename="applications.csv"
+   └─ Streams/sends raw CSV string
+```
+
 ---
 
 ## 5. Append-Only Audit Architecture & Immutability Guarantees
@@ -314,6 +377,9 @@ Candidate timelines in PipelineHQ are designed around strict compliance and non-
 4. **Timeline Modification & Deletion APIs**:
    - *Decision*: Never create client-facing POST, PUT, PATCH, or DELETE endpoints for timeline records, even for recruiters.
    - *Why*: Audit trails must be legally defensible, tamper-evident, and immutable. Exposing mutation endpoints would open the system to audit tampering or accidental history deletion.
-5. **Premature Implementation of Future Phase APIs**:
-   - *Decision*: Intentionally omitted search/filter/pagination query extensions, bulk candidate actions, CSV exports, SLA stall alerts, and analytics dashboards during Phase 7.
+5. **In-Memory Pagination & Client-Side Bulk Loops**:
+   - *Decision*: Never fetch all applications into memory to paginate, sort, or filter with JavaScript array methods; never rely on clients firing individual HTTP requests in parallel for bulk operations.
+   - *Why*: Performing filtering, sorting, counting, and pagination at the PostgreSQL database level guarantees sub-second response times and bounded memory usage regardless of applicant volume. Handling bulk operations server-side prevents partial client network dropouts from corrupting batch progress.
+6. **Premature Implementation of Future Phase APIs**:
+   - *Decision*: Intentionally omitted Phase 9 analytics dashboards and Phase 10 SLA stalled-application background alerts during Phase 8.
    - *Why*: Maintaining strict phase boundaries guarantees isolated, verifiable, and regression-free development of the core ATS foundation before layering alerting engines and reporting dashboards.
