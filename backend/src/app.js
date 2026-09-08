@@ -7,6 +7,7 @@ import authRouter from './modules/auth/auth.routes.js';
 import jobsRouter from './modules/jobs/jobs.routes.js';
 import applicationsRouter from './modules/applications/applications.routes.js';
 import reviewsRouter from './modules/reviews/reviews.routes.js';
+import analyticsRouter from './modules/analytics/analytics.routes.js';
 import { notFoundHandler } from './middleware/notFoundHandler.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
@@ -24,6 +25,7 @@ app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/jobs', jobsRouter);
 app.use('/api/v1/applications', applicationsRouter);
 app.use('/api/v1/my-reviews', reviewsRouter);
+app.use('/api/v1/analytics', analyticsRouter);
 
 // Centralized 404 handler
 app.use(notFoundHandler);
