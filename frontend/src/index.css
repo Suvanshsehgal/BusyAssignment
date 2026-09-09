@@ -1,1 +1,65 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --bg-page: #F5F7FB;
+    --bg-surface: #FFFFFF;
+    --bg-accent: #EDF3FE;
+    --border-subtle: #E7E9EE;
+    --text-heading: #111111;
+    --text-body: #4A4A4A;
+    --text-muted: #6B7280;
+  }
+
+  .dark {
+    --bg-page: #0F1115;
+    --bg-surface: #1A1D24;
+    --bg-accent: #212836;
+    --border-subtle: #262B35;
+    --text-heading: #F2F3F5;
+    --text-body: #AEB2BB;
+    --text-muted: #7E8494;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-body);
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-heading);
+    font-family: 'Poppins', 'Sora', sans-serif;
+  }
+}
+
+@theme {
+  --color-brand: #1E6FF0;
+  --color-brand-hover: #1656C2;
+  --color-brand-accent: #EDF3FE;
+
+  --color-status-success: #1D9E75;
+  --color-status-warning: #BA7517;
+  --color-status-error: #C0392B;
+
+  --color-page: var(--bg-page);
+  --color-surface: var(--bg-surface);
+  --color-accent: var(--bg-accent);
+  --color-border: var(--border-subtle);
+  --color-heading: var(--text-heading);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-heading: 'Poppins', 'Sora', system-ui, sans-serif;
+}
