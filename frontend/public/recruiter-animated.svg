@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 220" width="100%" height="100%">
+  <defs>
+    <linearGradient id="recBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E6FF0" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#1D9E75" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#F5F7FB" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E6FF0"/>
+      <stop offset="100%" stop-color="#1656C2"/>
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1E6FF0" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#1E6FF0" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#1E6FF0" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#0F1115" flood-opacity="0.08"/>
+    </filter>
+    <filter id="pillShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#1E6FF0" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <style>
+    @keyframes floatCard {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    @keyframes glideCandidate {
+      0% { transform: translateX(0px); }
+      50% { transform: translateX(55px); }
+      100% { transform: translateX(0px); }
+    }
+    @keyframes pulseRadar {
+      0% { r: 3.5px; opacity: 1; }
+      70% { r: 10px; opacity: 0; }
+      100% { r: 10px; opacity: 0; }
+    }
+    @keyframes progressBar {
+      0% { width: 40px; }
+      50% { width: 110px; }
+      100% { width: 40px; }
+    }
+    @keyframes badgeFloat {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.02); }
+    }
+    .floating-card { animation: floatCard 4s ease-in-out infinite; }
+    .gliding-card { animation: glideCandidate 6s ease-in-out infinite; }
+    .radar-ring { animation: pulseRadar 2s cubic-bezier(0.25, 1, 0.5, 1) infinite; }
+    .live-progress { animation: progressBar 5s ease-in-out infinite; }
+    .floating-badge { animation: badgeFloat 3.6s ease-in-out infinite alternate; }
+  </style>
+
+  <!-- Background Base -->
+  <rect width="520" height="220" rx="10" fill="url(#recBgGrad)"/>
+
+  <!-- Subtle Blueprint Grid Pattern -->
+  <g opacity="0.15" stroke="#1E6FF0" stroke-width="0.75" stroke-dasharray="2,3">
+    <line x1="40" y1="20" x2="40" y2="200"/>
+    <line x1="160" y1="20" x2="160" y2="200"/>
+    <line x1="280" y1="20" x2="280" y2="200"/>
+    <line x1="400" y1="20" x2="400" y2="200"/>
+    <line x1="20" y1="60" x2="500" y2="60"/>
+    <line x1="20" y1="120" x2="500" y2="120"/>
+    <line x1="20" y1="180" x2="500" y2="180"/>
+  </g>
+
+  <!-- Pipeline Stage Column 1: Screening -->
+  <g transform="translate(30, 30)">
+    <rect width="135" height="155" rx="8" fill="#FFFFFF" fill-opacity="0.8" stroke="#E7E9EE" stroke-width="1.2" filter="url(#cardShadow)"/>
+    <circle cx="16" cy="18" r="4" fill="#1E6FF0"/>
+    <text x="26" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#111111">Screening</text>
+    <rect x="100" y="11" width="22" height="14" rx="7" fill="#EDF3FE"/>
+    <text x="111" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" fill="#1E6FF0" text-anchor="middle">4</text>
+    
+    <!-- Static Candidate in Screening -->
+    <rect x="10" y="38" width="115" height="46" rx="6" fill="#F5F7FB" stroke="#E7E9EE" stroke-width="1"/>
+    <circle cx="25" cy="56" r="9" fill="#1E6FF0" fill-opacity="0.15"/>
+    <text x="25" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" fill="#1E6FF0" text-anchor="middle">JD</text>
+    <text x="40" y="53" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="600" fill="#111111">John Doe</text>
+    <text x="40" y="66" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" fill="#6B7280">Frontend Lead</text>
+
+    <!-- Mini SLA Stalled Marker -->
+    <rect x="10" y="94" width="115" height="46" rx="6" fill="#F5F7FB" stroke="#E7E9EE" stroke-width="1"/>
+    <circle cx="25" cy="112" r="9" fill="#1D9E75" fill-opacity="0.15"/>
+    <text x="25" y="116" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" fill="#1D9E75" text-anchor="middle">MK</text>
+    <text x="40" y="109" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="600" fill="#111111">Maya Kahn</text>
+    <text x="40" y="122" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" fill="#6B7280">DevOps Eng</text>
+  </g>
+
+  <!-- Pipeline Stage Column 2: Interview -->
+  <g transform="translate(180, 30)">
+    <rect width="135" height="155" rx="8" fill="#FFFFFF" fill-opacity="0.8" stroke="#E7E9EE" stroke-width="1.2" filter="url(#cardShadow)"/>
+    <circle cx="16" cy="18" r="4" fill="#8B5CF6"/>
+    <text x="26" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#111111">Interview</text>
+    <rect x="100" y="11" width="22" height="14" rx="7" fill="#F3E8FF"/>
+    <text x="111" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" fill="#8B5CF6" text-anchor="middle">2</text>
+    
+    <!-- Gliding/Transitioning Candidate Card -->
+    <g class="gliding-card">
+      <rect x="10" y="38" width="115" height="48" rx="6" fill="#FFFFFF" stroke="#1E6FF0" stroke-width="1.5" filter="url(#cardShadow)"/>
+      <circle cx="25" cy="56" r="9" fill="#1E6FF0"/>
+      <text x="25" y="60" font-family="system-ui, -apple-system, sans-serif" font-size="9" font-weight="700" fill="#FFFFFF" text-anchor="middle">AL</text>
+      <text x="40" y="53" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#111111">Alex Lee</text>
+      <rect x="40" y="58" width="58" height="13" rx="4" fill="#EDF3FE"/>
+      <text x="44" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="8" font-weight="600" fill="#1E6FF0">Stage Advancing</text>
+    </g>
+
+    <!-- Interview Progress Bar -->
+    <rect x="10" y="100" width="115" height="6" rx="3" fill="#E7E9EE"/>
+    <rect x="10" y="100" height="6" rx="3" fill="url(#primaryGrad)" class="live-progress"/>
+    <text x="10" y="122" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" fill="#6B7280">Panel: 3 Interviewers</text>
+  </g>
+
+  <!-- Pipeline Stage Column 3: Offer & Hired -->
+  <g transform="translate(330, 30)">
+    <rect width="160" height="155" rx="8" fill="#FFFFFF" fill-opacity="0.8" stroke="#E7E9EE" stroke-width="1.2" filter="url(#cardShadow)"/>
+    <circle cx="16" cy="18" r="4" fill="#1D9E75"/>
+    <text x="26" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="700" fill="#111111">Offer &amp; Hired</text>
+    
+    <!-- Candidate Offer Card -->
+    <rect x="12" y="38" width="136" height="52" rx="6" fill="#F0FDF4" stroke="#1D9E75" stroke-width="1"/>
+    <circle cx="28" cy="58" r="10" fill="#1D9E75"/>
+    <path d="M24 58 L27 61 L33 55" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="44" y="54" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="700" fill="#111111">Elena Rostova</text>
+    <text x="44" y="68" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" font-weight="600" fill="#1D9E75">Offer Accepted</text>
+
+    <!-- Metrics Snippet -->
+    <rect x="12" y="102" width="136" height="38" rx="6" fill="#F5F7FB" stroke="#E7E9EE" stroke-width="1"/>
+    <text x="20" y="116" font-family="system-ui, -apple-system, sans-serif" font-size="8.5" fill="#6B7280">Pipeline Velocity</text>
+    <text x="20" y="131" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#1E6FF0">14 Days Avg</text>
+    <path d="M125 128 L133 118 L138 123 L144 115" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- Top Floating Badge: Active Pipeline -->
+  <g transform="translate(185, 12)" class="floating-badge">
+    <rect width="150" height="24" rx="12" fill="#FFFFFF" stroke="#1E6FF0" stroke-width="1.2" filter="url(#pillShadow)"/>
+    <!-- Pulsing Radar Dot -->
+    <circle cx="16" cy="12" r="3.5" fill="#1D9E75"/>
+    <circle cx="16" cy="12" r="3.5" fill="none" stroke="#1D9E75" stroke-width="1.5" class="radar-ring"/>
+    <text x="28" y="16" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="700" fill="#111111">Live Candidate Funnel</text>
+  </g>
+</svg>
