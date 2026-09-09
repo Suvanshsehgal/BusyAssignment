@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queryClient.js';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { AuthProvider } from './context/AuthContext.jsx';
 import { useAuth } from './context/useAuth.js';
@@ -58,48 +60,51 @@ const RootRoute = () => {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <ThemeProvider>
-        <AuthProvider>
-          <Routes>
-            {/* 1. Root and Public Landing */}
-            <Route path="/" element={<RootRoute />} />
-            <Route path="/get-started" element={<GetStartedPage />} />
-            <Route path="/login" element={<LoginPage />} />
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <ThemeProvider>
+          <AuthProvider>
+            <Routes>
+              {/* 1. Root and Public Landing */}
+              <Route path="/" element={<RootRoute />} />
+              <Route path="/get-started" element={<GetStartedPage />} />
+              <Route path="/login" element={<LoginPage />} />
 
-            {/* 2. Recruiter Routes (Protected + Role Guard: 'recruiter') */}
-            <Route element={<RoleRoute allowedRoles={['recruiter']} />}>
-              <Route element={<RecruiterLayout />}>
-                <Route path="/dashboard" element={<DashboardPage />} />
-                <Route path="/jobs" element={<JobsPage />} />
-                <Route path="/jobs/:id" element={<JobDetailPage />} />
-                <Route path="/applications" element={<ApplicationsPage />} />
-                <Route path="/applications/:id" element={<ApplicationDetailPage />} />
-                <Route path="/analytics" element={<AnalyticsPage />} />
-                <Route path="/alerts" element={<AlertsPage />} />
+              {/* 2. Recruiter Routes (Protected + Role Guard: 'recruiter') */}
+              <Route element={<RoleRoute allowedRoles={['recruiter']} />}>
+                <Route element={<RecruiterLayout />}>
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/jobs" element={<JobsPage />} />
+                  <Route path="/jobs/:id" element={<JobDetailPage />} />
+                  <Route path="/applications" element={<ApplicationsPage />} />
+                  <Route path="/applications/:id" element={<ApplicationDetailPage />} />
+                  <Route path="/analytics" element={<AnalyticsPage />} />
+                  <Route path="/alerts" element={<AlertsPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* 3. Interviewer Routes (Protected + Role Guard: 'interviewer') */}
-            <Route element={<RoleRoute allowedRoles={['interviewer']} />}>
-              <Route element={<InterviewerLayout />}>
-                <Route path="/my-reviews" element={<MyReviewsPage />} />
-                <Route path="/my-reviews/:id" element={<ReviewDetailPage />} />
+              {/* 3. Interviewer Routes (Protected + Role Guard: 'interviewer') */}
+              <Route element={<RoleRoute allowedRoles={['interviewer']} />}>
+                <Route element={<InterviewerLayout />}>
+                  <Route path="/my-reviews" element={<MyReviewsPage />} />
+                  <Route path="/my-reviews/:id" element={<ReviewDetailPage />} />
+                </Route>
               </Route>
-            </Route>
 
-            {/* 4. Public Careers Routes (Unauthenticated, Public Layout) */}
-            <Route element={<PublicLayout />}>
-              <Route path="/careers" element={<CareersPage />} />
-              <Route path="/careers/:jobId" element={<CareersJobDetailPage />} />
-              <Route path="/careers/:jobId/apply" element={<CareersApplyPage />} />
-            </Route>
+              {/* 4. Public Careers Routes (Unauthenticated, Public Layout) */}
+              <Route element={<PublicLayout />}>
+                <Route path="/careers" element={<CareersPage />} />
+                <Route path="/careers/:jobId" element={<CareersJobDetailPage />} />
+                <Route path="/careers/:jobId/apply" element={<CareersApplyPage />} />
+              </Route>
 
-            {/* 5. 404 Catch-All */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </AuthProvider>
-      </ThemeProvider>
-    </BrowserRouter>
+              {/* 5. 404 Catch-All */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </AuthProvider>
+        </ThemeProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
+
