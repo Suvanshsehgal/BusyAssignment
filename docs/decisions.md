@@ -188,3 +188,14 @@ This document logs architectural and engineering decisions that shaped the Pipel
 - **Why**:
   - Candidates occasionally double-click submit buttons or re-apply multiple times in quick succession. Without duplicate protection, recruiter pipelines would fill with redundant candidate scorecards and fragmented reviews. Returning a structured `409 Conflict` informs the applicant while keeping the pipeline clean.
   - Public submission endpoints are naturally exposed to bot spam and denial-of-wallet/denial-of-service attempts. The in-memory sliding-window limiter throttles abusive IPs (10 requests per 15 minutes) with HTTP 429 without placing any rate-limiting constraints on internal recruiter or interviewer APIs.
+
+---
+
+## Decision 18: Role-Neutral Landing Experience with Server-Enforced Authentication
+
+- **Chose**: Designing the landing page (`GetStartedPage`) as a purely informational overview of platform roles (Recruiter vs Interviewer) with a single primary "Get Started" action navigating to `/login`, resolving user role strictly from the server-signed JWT upon authentication (`/api/v1/auth/me`).
+- **Rejected**: Adding role-selection buttons, radio buttons, or passing client-side `?role=...` query parameters from the landing page to dictate user experience.
+- **Why**:
+  - In a secure recruitment platform, roles and permissions are authoritative backend data points, not client preferences. Offering role selection on a public landing page creates a false impression that users can choose their permissions.
+  - Informational cards clearly articulate the capabilities of each role for demo evaluators and candidates without conflating marketing/educational UI with authorization logic.
+  - A single, unambiguous call to action streamlines the onboarding funnel and keeps frontend routing strictly tied to authenticated session state.

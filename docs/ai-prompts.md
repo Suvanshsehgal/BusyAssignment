@@ -394,3 +394,21 @@ await prisma.timeline.create({
 2. **PII Duplication in Audit Logs**: Storing candidate email and full name inside the free-form `details` JSON duplicates PII across tables and complicates GDPR/CCPA data scrubbing. The `Application` table already holds name and email; the timeline event should record only contextual operational metadata (`{ notes, source: 'Careers Page' }`).
 3. **Duplicate Submission Protection**: The AI omitted duplicate protection. I introduced an explicit query checking if an application with the same `(email, jobOpeningId)` already exists, returning `409 Conflict` with a clear message.
 4. **Spam & Flooding Protection**: Public unauthenticated POST endpoints are prime targets for automated spam bots. I implemented a sliding-window in-memory rate limiter restricting submissions from an IP to 10 requests per 15 minutes, while leaving internal recruiter APIs completely unthrottled.
+
+---
+
+## 19. Frontend Landing Page & Role-Neutral Get Started Experience (Frontend Phase 1)
+
+### Prompt
+> "Build the initial landing / get-started page for HireStream. Show Recruiter and Interviewer capability cards, full light/dark theme support, and a way to enter the app."
+
+### What I got
+The AI initially generated clickable role cards with separate CTA buttons ("Continue as Recruiter", "Continue as Interviewer") that stored a selected role in `localStorage` and passed `?role=recruiter` query parameters to the login page. It also broke dark mode because it assumed Tailwind v3 `darkMode: 'class'` syntax in a Tailwind v4 project.
+
+### What I corrected
+1. **Removed Client Role Selection**: In our platform architecture, roles are strictly server-enforced and authoritative. A user cannot choose their role on a public landing page—their permissions are determined by the backend token after sign-in. I refactored both cards to be purely informational, removed all internal buttons and selection states, and added a single centered "Get Started →" button routing to `/login`.
+2. **Fixed Tailwind v4 Dark Mode**: Tailwind v4 doesn't use `tailwind.config.js` class dark mode. I configured `@custom-variant dark (&:where(.dark, .dark *));` in `index.css` so our `ThemeToggle` component properly toggles the `dark` class on `document.documentElement` across all cards, text, and borders.
+3. **Resilient CDN Media**: Added lazy loading, top-corner rounding, and an SVG fallback error boundary (`onError`) so broken image links don't disrupt the UI layout.
+4. **Single-Screen Layout & Vector Animations**: Adjusted vertical metrics, paddings, and card proportions with `h-screen max-h-screen overflow-hidden` so the entire experience fits cleanly on screen without vertical scrolling. Swapped external static photography for smooth animated SVGs (`recruiter-animated.svg` and `interviewer-animated.svg`) with CSS `@keyframes` that illustrate real-time pipeline movements and live scorecard evaluation.
+
+
