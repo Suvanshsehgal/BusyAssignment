@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/useAuth.js';
 import { ThemeToggle } from '../components/ThemeToggle.jsx';
 import { getErrorMessage } from '../utils/error.js';
 
 export const LoginPage = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,12 +17,13 @@ export const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // If already authenticated, redirect to protected home
+  // If already authenticated, redirect to role-specific landing page
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/', { replace: true });
+    if (isAuthenticated && user) {
+      const roleHome = user.role === 'recruiter' ? '/dashboard' : '/my-reviews';
+      navigate(roleHome, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const validate = () => {
     const errors = {};
@@ -54,11 +56,18 @@ export const LoginPage = () => {
     setErrorMessage('');
 
     try {
-      await login({
+      const verifiedUser = await login({
         email: email.trim().toLowerCase(),
         password,
       });
-      navigate('/', { replace: true });
+
+      const roleHome = verifiedUser?.role === 'recruiter' ? '/dashboard' : '/my-reviews';
+      const fromPath = location.state?.from?.pathname;
+      const isAllowedFrom =
+        (verifiedUser?.role === 'recruiter' && fromPath && !fromPath.startsWith('/my-reviews')) ||
+        (verifiedUser?.role === 'interviewer' && fromPath && fromPath.startsWith('/my-reviews'));
+
+      navigate(isAllowedFrom ? fromPath : roleHome, { replace: true });
     } catch (err) {
       const formattedError = getErrorMessage(
         err,
