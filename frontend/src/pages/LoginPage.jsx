@@ -140,7 +140,7 @@ export const LoginPage = () => {
                     <div className="w-full max-w-[420px] lg:max-w-[460px] flex items-center justify-center">
                       {!imgLoadError ? (
                         <img
-                          src="/login-hero.jpg"
+                          src="/login-hero.webp"
                           alt="HireStream talent pipeline – candidate profiles flowing through a hiring funnel"
                           className="w-full h-auto rounded-2xl object-cover shadow-lg pointer-events-none"
                           onError={() => setImgLoadError(true)}
