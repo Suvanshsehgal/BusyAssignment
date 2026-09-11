@@ -63,3 +63,13 @@
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-heading: 'Poppins', 'Sora', system-ui, sans-serif;
 }
+
+/* Responsive rule: On mobile screens (<768px) and short screens (<650px height), show ONLY the login box */
+@media (max-width: 767px), (max-height: 650px) {
+  .login-side-panel {
+    display: none !important;
+  }
+  .login-card-container {
+    max-width: 420px !important;
+  }
+}
