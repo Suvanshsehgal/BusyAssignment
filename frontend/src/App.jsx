@@ -16,7 +16,7 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { GetStartedPage } from './pages/GetStartedPage.jsx';
 import { NotFoundPage } from './pages/NotFoundPage.jsx';
 
-// Recruiter Pages (Placeholder)
+// Recruiter Pages
 import { DashboardPage } from './pages/recruiter/DashboardPage.jsx';
 import { JobsPage } from './pages/recruiter/JobsPage.jsx';
 import { JobDetailPage } from './pages/recruiter/JobDetailPage.jsx';
@@ -25,11 +25,11 @@ import { ApplicationDetailPage } from './pages/recruiter/ApplicationDetailPage.j
 import { AnalyticsPage } from './pages/recruiter/AnalyticsPage.jsx';
 import { AlertsPage } from './pages/recruiter/AlertsPage.jsx';
 
-// Interviewer Pages (Placeholder)
+// Interviewer Pages
 import { MyReviewsPage } from './pages/interviewer/MyReviewsPage.jsx';
 import { ReviewDetailPage } from './pages/interviewer/ReviewDetailPage.jsx';
 
-// Public Careers Pages (Placeholder)
+// Public Careers Pages
 import { CareersPage } from './pages/careers/CareersPage.jsx';
 import { CareersJobDetailPage } from './pages/careers/CareersJobDetailPage.jsx';
 import { CareersApplyPage } from './pages/careers/CareersApplyPage.jsx';
