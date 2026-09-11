@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, Users, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, Sparkles, CheckCircle2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../context/useAuth.js';
 import { ThemeToggle } from '../components/ThemeToggle.jsx';
 import { getErrorMessage } from '../utils/error.js';
@@ -17,7 +17,6 @@ export const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imgLoadError, setImgLoadError] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // If already authenticated, redirect to role-specific landing page
   useEffect(() => {
@@ -84,8 +83,8 @@ export const LoginPage = () => {
   const isFormIncomplete = !email.trim() || !password;
 
   return (
-    <div className="h-screen max-h-screen overflow-hidden flex flex-col justify-between bg-[#F5F7FB] dark:bg-[#0F1115] text-[#4A4A4A] dark:text-[#AEB2BB] transition-colors duration-200 w-full">
-      {/* Top Navigation Bar with Dedicated Sidebar Toggle */}
+    <div className="h-screen max-h-screen overflow-hidden flex flex-col justify-between bg-[#F5F7FB] dark:bg-[#0F1115] text-[#4A4A4A] dark:text-[#AEB2BB] transition-colors duration-200 w-full py-2 sm:py-3">
+      {/* Top Navigation Bar */}
       <header className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-2.5 sm:py-3.5 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5 select-none">
           <div className="w-8 h-8 rounded-lg bg-[#1E6FF0] flex items-center justify-center text-white font-bold text-base shadow-sm">
@@ -96,54 +95,19 @@ export const LoginPage = () => {
           </span>
         </div>
 
-        {/* Header Controls: Sidebar Toggle + Theme Toggle */}
-        <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E7E9EE] dark:border-[#262B35] bg-white dark:bg-[#1A1D24] hover:bg-[#EDF3FE] dark:hover:bg-[#262B35] text-xs font-semibold text-[#111111] dark:text-[#F2F3F5] transition-colors cursor-pointer shadow-xs focus:outline-none"
-            aria-label={isSidebarOpen ? "Close side panel" : "Open side panel"}
-            title={isSidebarOpen ? "Close side panel" : "Open side panel"}
-          >
-            {isSidebarOpen ? (
-              <>
-                <PanelLeftClose className="w-4 h-4 text-[#1E6FF0]" />
-                <span className="hidden sm:inline">Hide Sidebar</span>
-              </>
-            ) : (
-              <>
-                <PanelLeftOpen className="w-4 h-4 text-[#1E6FF0]" />
-                <span className="hidden sm:inline">Show Sidebar</span>
-              </>
-            )}
-          </button>
-
-          <ThemeToggle />
-        </div>
+        <ThemeToggle />
       </header>
 
       {/* Main Authentication Section */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-2 sm:py-3 w-full min-h-0">
-        {/* Responsive Outer Container with smooth expansion/collapse animation */}
-        <div
-          className={`w-full mx-auto flex items-center justify-center transition-all duration-300 ease-in-out ${
-            isSidebarOpen
-              ? 'max-w-[420px] md:max-w-5xl lg:max-w-6xl xl:max-w-[1140px]'
-              : 'max-w-[440px]'
-          }`}
-        >
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-2 sm:py-4 w-full min-h-0 overflow-hidden">
+        {/* Responsive Outer Container: Automatically adjusts to 420px on mobile and short screens */}
+        <div className="login-card-container w-full max-w-[420px] md:max-w-5xl lg:max-w-6xl xl:max-w-[1140px] mx-auto flex items-center justify-center transition-all duration-200">
           {/* Cohesive Rounded Authentication Card */}
-          <div className="w-full bg-white dark:bg-[#1A1D24] border border-[#E7E9EE] dark:border-[#262B35] rounded-2xl shadow-[0_8px_32px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden transition-colors duration-200">
+          <div className="w-full max-h-full bg-white dark:bg-[#1A1D24] border border-[#E7E9EE] dark:border-[#262B35] rounded-2xl shadow-[0_8px_32px_rgba(15,23,42,0.06)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.35)] overflow-hidden transition-colors duration-200">
             <div className="flex flex-col md:flex-row md:min-h-[490px] lg:min-h-[530px]">
               
-              {/* Left Column: Sticky Collapsible Sidebar Panel */}
-              <div
-                className={`relative overflow-hidden transition-all duration-300 ease-in-out ${
-                  isSidebarOpen
-                    ? 'w-full md:w-[48%] lg:w-[50%] border-b md:border-b-0 md:border-r border-[#E7E9EE] dark:border-[#262B35] opacity-100'
-                    : 'w-0 max-w-0 border-0 opacity-0 pointer-events-none p-0'
-                }`}
-              >
+              {/* Left Column: Side Panel (hidden on mobile and short screens) */}
+              <div className="login-side-panel hidden md:flex md:w-[48%] lg:w-[50%] border-b md:border-b-0 md:border-r border-[#E7E9EE] dark:border-[#262B35] relative overflow-hidden">
                 <div className="h-full min-h-[490px] lg:min-h-[530px] flex flex-col justify-between p-6 lg:p-9 relative overflow-hidden bg-gradient-to-br from-[#EDF3FE] via-[#F4F7FE] to-[#E5EFFF] dark:from-[#15181E] dark:via-[#181C24] dark:to-[#13161C] w-full min-w-[340px] md:min-w-[380px] lg:min-w-[420px]">
                   {/* Background Ambient Glows */}
                   <div 
@@ -155,25 +119,11 @@ export const LoginPage = () => {
                     aria-hidden="true" 
                   />
 
-                  {/* Top Branding Strip with In-Panel Close Button */}
+                  {/* Top Branding Strip */}
                   <div className="relative z-10">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/85 dark:bg-[#1E222B]/90 border border-[#E7E9EE] dark:border-[#262B35] text-[11px] font-semibold text-[#1E6FF0] shadow-xs">
-                        <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Recruitment Operations Platform</span>
-                      </div>
-
-                      {/* Close Sidebar Button inside the panel */}
-                      <button
-                        type="button"
-                        onClick={() => setIsSidebarOpen(false)}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 dark:bg-[#1E222B]/80 hover:bg-white dark:hover:bg-[#262B35] border border-[#E7E9EE] dark:border-[#262B35] text-xs font-medium text-[#4A4A4A] dark:text-[#AEB2BB] hover:text-[#1E6FF0] transition-colors cursor-pointer shadow-xs focus:outline-none"
-                        title="Close sidebar"
-                        aria-label="Close sidebar"
-                      >
-                        <PanelLeftClose className="w-3.5 h-3.5" />
-                        <span className="text-[11px]">Close</span>
-                      </button>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/85 dark:bg-[#1E222B]/90 border border-[#E7E9EE] dark:border-[#262B35] text-[11px] font-semibold text-[#1E6FF0] shadow-xs">
+                      <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                      <span>Recruitment Operations Platform</span>
                     </div>
 
                     <h2 className="font-heading font-bold text-2xl lg:text-3xl text-[#111111] dark:text-[#F2F3F5] tracking-tight mt-3 leading-tight">
@@ -185,20 +135,20 @@ export const LoginPage = () => {
                     </p>
                   </div>
 
-                  {/* Center: Recruitment Animated SVG with Graceful Fallback */}
+                  {/* Center: Hero Illustration */}
                   <div className="relative z-10 my-4 lg:my-6 flex items-center justify-center">
-                    <div className="w-full max-w-[360px] lg:max-w-[400px] max-h-[250px] lg:max-h-[280px] aspect-[500/350] flex items-center justify-center">
+                    <div className="w-full max-w-[420px] lg:max-w-[460px] flex items-center justify-center">
                       {!imgLoadError ? (
                         <img
-                          src="/login-recruitment-animated.svg"
-                          alt="HireStream live recruitment and interview pipeline visualization"
-                          className="w-full h-full object-contain filter drop-shadow-sm pointer-events-none"
+                          src="/login-hero.jpg"
+                          alt="HireStream talent pipeline – candidate profiles flowing through a hiring funnel"
+                          className="w-full h-auto rounded-2xl object-cover shadow-lg pointer-events-none"
                           onError={() => setImgLoadError(true)}
                           loading="eager"
                         />
                       ) : (
                         /* Graceful Fallback */
-                        <div className="w-full h-full rounded-xl p-5 bg-white/70 dark:bg-[#1C202A]/80 border border-[#E7E9EE] dark:border-[#262B35] flex flex-col justify-center gap-2.5">
+                        <div className="w-full rounded-xl p-5 bg-white/70 dark:bg-[#1C202A]/80 border border-[#E7E9EE] dark:border-[#262B35] flex flex-col justify-center gap-2.5">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-lg bg-[#1E6FF0]/10 flex items-center justify-center text-[#1E6FF0]">
                               <Users className="w-4.5 h-4.5" />
@@ -234,33 +184,13 @@ export const LoginPage = () => {
                 </div>
               </div>
 
-              {/* Right Column: Modern Authentication Form */}
-              <div
-                className={`flex flex-col justify-center p-6 sm:p-8 lg:p-11 bg-white dark:bg-[#1A1D24] transition-all duration-300 ease-in-out ${
-                  isSidebarOpen ? 'w-full md:w-[52%] lg:w-[50%]' : 'w-full'
-                }`}
-              >
+              {/* Right Column: Entry Login Box */}
+              <div className="w-full md:w-[52%] lg:w-[50%] flex flex-col justify-center p-6 sm:p-8 lg:p-11 bg-white dark:bg-[#1A1D24] overflow-y-auto">
                 <div className="max-w-[380px] w-full mx-auto">
                   {/* Form Header */}
                   <div className="mb-5 sm:mb-6 text-left">
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-[#1E6FF0]/10 dark:bg-[#1E6FF0]/20 flex items-center justify-center text-[#1E6FF0] font-bold text-base shadow-xs">
-                        H
-                      </div>
-
-                      {/* Reopen Sidebar Button when collapsed */}
-                      {!isSidebarOpen && (
-                        <button
-                          type="button"
-                          onClick={() => setIsSidebarOpen(true)}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#EDF3FE] dark:bg-[#15181E] hover:bg-[#D9E5FC] dark:hover:bg-[#262B35] border border-[#1E6FF0]/30 text-xs font-semibold text-[#1E6FF0] transition-colors cursor-pointer shadow-xs focus:outline-none"
-                          title="Open sidebar"
-                          aria-label="Open sidebar"
-                        >
-                          <PanelLeftOpen className="w-3.5 h-3.5" />
-                          <span>Show Sidebar</span>
-                        </button>
-                      )}
+                    <div className="w-9 h-9 rounded-xl bg-[#1E6FF0]/10 dark:bg-[#1E6FF0]/20 flex items-center justify-center text-[#1E6FF0] font-bold text-base shadow-xs mb-3">
+                      H
                     </div>
 
                     <h1 className="font-heading font-bold text-2xl sm:text-3xl text-[#111111] dark:text-[#F2F3F5] tracking-tight">
