@@ -1,8 +1,8 @@
-import { Menu, LogOut, Shield } from 'lucide-react';
+import { Menu, LogOut, Shield, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuth } from '../context/useAuth.js';
 import { ThemeToggle } from './ThemeToggle.jsx';
 
-export const Header = ({ onMenuClick }) => {
+export const Header = ({ onMenuClick, isSidebarCollapsed = false, onToggleSidebar }) => {
   const { user, logout, isRecruiter } = useAuth();
 
   const getInitials = (name) => {
@@ -16,8 +16,9 @@ export const Header = ({ onMenuClick }) => {
 
   return (
     <header className="h-16 sticky top-0 z-30 bg-white dark:bg-[#1A1D24] border-b border-[#E7E9EE] dark:border-[#262B35] px-4 sm:px-6 flex items-center justify-between transition-colors duration-200">
-      {/* Left Area: Mobile Hamburger Button & Portal Brand Indicator */}
+      {/* Left Area: Mobile Hamburger Button, Desktop Sidebar Toggle & Portal Brand Indicator */}
       <div className="flex items-center gap-3">
+        {/* Mobile Hamburger Button */}
         <button
           type="button"
           onClick={onMenuClick}
@@ -27,6 +28,8 @@ export const Header = ({ onMenuClick }) => {
           <Menu className="w-5 h-5" />
         </button>
 
+        {/* Desktop Sidebar Collapse / Expand Toggle Button */}
+        
         <div className="flex items-center gap-2 select-none">
           <span className="hidden sm:inline text-xs font-medium text-[#6B7280] dark:text-[#7E8494]">
             Workspace
@@ -68,22 +71,20 @@ export const Header = ({ onMenuClick }) => {
           >
             {getInitials(user?.name)}
           </div>
-          <div className="pr-1 text-left select-none">
-            <p className="text-xs font-medium text-[#111111] dark:text-[#F2F3F5] leading-tight max-w-[130px] truncate">
-              {user?.name || 'User'}
-            </p>
-          </div>
+          <span className="text-xs font-medium text-[#111111] dark:text-[#F2F3F5] max-w-[120px] truncate">
+            {user?.name || 'User'}
+          </span>
         </div>
 
-        {/* Logout Button */}
+        {/* Header Sign Out Action */}
         <button
           type="button"
           onClick={logout}
-          title="Sign Out"
-          className="rounded-full border border-[#E7E9EE] dark:border-[#262B35] text-[#4A4A4A] dark:text-[#AEB2BB] hover:bg-[#F5F7FB] dark:hover:bg-[#212836] hover:text-[#C0392B] dark:hover:text-[#F87171] px-3 sm:px-3.5 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1E6FF0]"
+          title="Sign out of account"
+          aria-label="Sign out of account"
+          className="p-2 rounded-[10px] text-[#6B7280] dark:text-[#7E8494] hover:bg-[#F5F7FB] dark:hover:bg-[#212836] hover:text-[#C0392B] dark:hover:text-[#F87171] transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#C0392B]"
         >
-          <LogOut className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Sign Out</span>
+          <LogOut className="w-4 h-4" />
         </button>
       </div>
     </header>
