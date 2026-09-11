@@ -192,3 +192,13 @@ export const useBulkReject = () => {
     },
   });
 };
+
+export const useApplicationAutocomplete = (searchQuery) => {
+  const trimmed = searchQuery?.trim() || '';
+  return useQuery({
+    queryKey: ['applications', 'autocomplete', trimmed],
+    queryFn: () => getApplicationsApi({ search: trimmed, limit: 8 }),
+    enabled: trimmed.length > 0,
+    staleTime: 30 * 1000,
+  });
+};

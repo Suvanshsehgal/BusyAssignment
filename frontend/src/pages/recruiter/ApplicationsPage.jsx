@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users,
-  Search,
   Plus,
   Download,
   RefreshCw,
@@ -22,6 +21,7 @@ import { exportApplicationsCsvApi } from '../../api/applications.js';
 import { StageBadge } from '../../components/applications/StageBadge.jsx';
 import { ApplicationFormModal } from '../../components/applications/ApplicationFormModal.jsx';
 import { BulkActionModal } from '../../components/applications/BulkActionModal.jsx';
+import { ApplicationSearchAutocomplete } from '../../components/applications/ApplicationSearchAutocomplete.jsx';
 
 const STAGES = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired', 'Rejected'];
 
@@ -204,21 +204,22 @@ export const ApplicationsPage = () => {
 
       {/* Filter and Search Bar */}
       <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#1A1D24] border border-[#E7E9EE] dark:border-[#262B35] shadow-[0_2px_12px_rgba(0,0,0,0.02)] space-y-4">
-        {/* Search input + Submit */}
+        {/* Search input with server-side debounced autocomplete + Submit */}
         <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-2.5">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
-            <input
-              type="text"
-              placeholder="Search by candidate name or email address..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-[#E7E9EE] dark:border-[#262B35] text-xs bg-[#F5F7FB] dark:bg-[#15181E] text-[#111111] dark:text-[#F2F3F5] placeholder-[#9CA3AF] transition-colors focus:bg-white dark:focus:bg-[#1A1D24] focus:outline-none focus:ring-2 focus:ring-[#1E6FF0]"
-            />
-          </div>
+          <ApplicationSearchAutocomplete
+            value={searchInput}
+            onChange={setSearchInput}
+            onSubmit={handleSearchSubmit}
+            onClear={() => {
+              setSearchInput('');
+              setActiveSearch('');
+              setPage(1);
+            }}
+            placeholder="Search by candidate name or email address..."
+          />
           <button
             type="submit"
-            className="px-4 py-2 rounded-xl bg-[#1E6FF0] hover:bg-[#1656C2] text-white text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1E6FF0] cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#1E6FF0] hover:bg-[#1656C2] text-white text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#1E6FF0] cursor-pointer shrink-0"
           >
             Search
           </button>

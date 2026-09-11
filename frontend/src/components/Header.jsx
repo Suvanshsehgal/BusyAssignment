@@ -28,8 +28,7 @@ export const Header = ({ onMenuClick, isSidebarCollapsed = false, onToggleSideba
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Desktop Sidebar Collapse / Expand Toggle Button */}
-        
+
         <div className="flex items-center gap-2 select-none">
           <span className="hidden sm:inline text-xs font-medium text-[#6B7280] dark:text-[#7E8494]">
             Workspace
